@@ -1,9 +1,9 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-
+import { EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY } from '@env';
 
 export const supabase = createClient(
-  'postgresql://postgres.srdzhnxqbdntqmqyttfe:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres',
+  EXPO_PUBLIC_SUPABASE_URL,
   EXPO_PUBLIC_SUPABASE_ANON_KEY,
   {
     auth: {
