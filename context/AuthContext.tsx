@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/data/mockData';
+import { supabase } from '@/lib/supabase';
+import * as SecureStore from 'expo-secure-store';
+import { User } from '@/types';
 
 interface AuthContextProps {
   user: User | null;
@@ -7,7 +9,7 @@ interface AuthContextProps {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: Partial<User>) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
 }
 
@@ -17,104 +19,141 @@ const AuthContext = createContext<AuthContextProps>({
   isLoading: true,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
   updateUser: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Simulate loading the user from storage on app start
+
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        // For demo purposes, we'll set a mock user
-        setUser({
-          id: '1',
-          name: 'John Doe',
-          email: 'john@example.com',
-          avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-          role: 'car-owner',
-          phone: '+1 (555) 123-4567',
-          location: 'San Francisco, CA',
-        });
-      } catch (error) {
-        console.error('Failed to load user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadUser();
+    checkUser();
   }, []);
-  
+
+  async function checkUser() {
+    try {
+      const session = await SecureStore.getItemAsync('session');
+      if (session) {
+        const { data: { user } } = await supabase.auth.getUser(session);
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            setUser(profile);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
-      setUser({
-        id: '1',
-        name: 'John Doe',
+      const { data: { session }, error } = await supabase.auth.signInWithPassword({
         email,
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-        role: 'car-owner',
-        phone: '+1 (555) 123-4567',
-        location: 'San Francisco, CA',
+        password,
       });
+
+      if (error) throw error;
+
+      if (session) {
+        await SecureStore.setItemAsync('session', session.access_token);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          setUser(profile);
+        }
+      }
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Error logging in:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
-  
+
   const register = async (userData: Partial<User>) => {
-    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful registration
-      setUser({
-        id: '1',
-        name: userData.name || 'New User',
-        email: userData.email || 'user@example.com',
-        avatar: userData.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-        role: userData.role || 'car-owner',
-        phone: userData.phone || '',
-        location: userData.location || '',
+      const { data: { session }, error } = await supabase.auth.signUp({
+        email: userData.email!,
+        password: userData.password!,
       });
+
+      if (error) throw error;
+
+      if (session) {
+        await SecureStore.setItemAsync('session', session.access_token);
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: session.user.id,
+              name: userData.name,
+              email: userData.email,
+              phone: userData.phone,
+              location: userData.location,
+              role: userData.role,
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          setUser(profile);
+        }
+      }
     } catch (error) {
-      console.error('Registration failed:', error);
+      console.error('Error registering:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
-  
-  const logout = () => {
-    setUser(null);
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      await SecureStore.deleteItemAsync('session');
+      setUser(null);
+    } catch (error) {
+      console.error('Error logging out:', error);
+      throw error;
+    }
   };
-  
+
   const updateUser = async (userData: Partial<User>) => {
     if (!user) return;
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      const { error } = await supabase
+        .from('profiles')
+        .update(userData)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
       setUser({ ...user, ...userData });
     } catch (error) {
-      console.error('Update user failed:', error);
+      console.error('Error updating user:', error);
       throw error;
     }
   };
-  
+
   return (
     <AuthContext.Provider 
       value={{ 
