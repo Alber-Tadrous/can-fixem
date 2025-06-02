@@ -1,216 +1,351 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
-import { Mail, Lock, User, MapPin, Phone, ArrowLeft, Wrench, Car } from 'lucide-react-native';
+import { ArrowLeft, Plus } from 'lucide-react-native';
+import ProgressSteps from '@/components/auth/ProgressSteps';
+import VehicleForm from '@/components/auth/VehicleForm';
+
+interface PersonalInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+interface Vehicle {
+  make: string;
+  model: string;
+  year: string;
+}
+
+const initialPersonalInfo: PersonalInfo = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+};
+
+const initialVehicle: Vehicle = {
+  make: '',
+  model: '',
+  year: '',
+};
 
 export default function SignUpScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { register } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<'car-owner' | 'service-provider' | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    location: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(initialPersonalInfo);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([{ ...initialVehicle }]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleSignUp = async () => {
-    try {
-      setError('');
-      if (!selectedRole) {
-        setError('Please select a role');
-        return;
+  const validatePersonalInfo = () => {
+    const newErrors: { [key: string]: string } = {};
+    const nameRegex = /^[a-zA-Z]{2,50}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!nameRegex.test(personalInfo.firstName)) {
+      newErrors.firstName = 'First name must be 2-50 letters only';
+    }
+    if (!nameRegex.test(personalInfo.lastName)) {
+      newErrors.lastName = 'Last name must be 2-50 letters only';
+    }
+    if (!emailRegex.test(personalInfo.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (!passwordRegex.test(personalInfo.password)) {
+      newErrors.password = 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character';
+    }
+    if (personalInfo.password !== personalInfo.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateVehicles = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    vehicles.forEach((vehicle, index) => {
+      if (!vehicle.make) {
+        newErrors[`${index}-make`] = 'Please select a make';
       }
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        return;
+      if (!vehicle.model) {
+        newErrors[`${index}-model`] = 'Please select a model';
       }
-      await register({ ...formData, role: selectedRole });
-      router.replace('/(tabs)');
-    } catch (err) {
-      setError('Failed to create account');
+      if (!vehicle.year) {
+        newErrors[`${index}-year`] = 'Please select a year';
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (step === 1 && validatePersonalInfo()) {
+      setStep(2);
     }
   };
 
-  if (!selectedRole) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Choose Your Role</Text>
-        </View>
+  const handlePrevStep = () => {
+    if (step === 2) {
+      setStep(1);
+    } else {
+      router.back();
+    }
+  };
 
-        <View style={styles.roleContainer}>
-          <Text style={[styles.roleTitle, { color: colors.text }]}>How will you use Can Fixem?</Text>
-          
-          <TouchableOpacity
-            style={[
-              styles.roleCard,
-              { backgroundColor: colors.card, borderColor: colors.border }
-            ]}
-            onPress={() => setSelectedRole('car-owner')}
-          >
-            <View style={[styles.roleIconContainer, { backgroundColor: colors.primary + '10' }]}>
-              <Car size={32} color={colors.primary} />
-            </View>
-            <Text style={[styles.roleCardTitle, { color: colors.text }]}>Car Owner</Text>
-            <Text style={[styles.roleCardDescription, { color: colors.textSecondary }]}>
-              Find reliable service providers and get your car fixed wherever you are
-            </Text>
-          </TouchableOpacity>
+  const addVehicle = () => {
+    setVehicles([...vehicles, { ...initialVehicle }]);
+  };
 
-          <TouchableOpacity
-            style={[
-              styles.roleCard,
-              { backgroundColor: colors.card, borderColor: colors.border }
-            ]}
-            onPress={() => setSelectedRole('service-provider')}
-          >
-            <View style={[styles.roleIconContainer, { backgroundColor: colors.secondary + '10' }]}>
-              <Wrench size={32} color={colors.secondary} />
-            </View>
-            <Text style={[styles.roleCardTitle, { color: colors.text }]}>Service Provider</Text>
-            <Text style={[styles.roleCardDescription, { color: colors.textSecondary }]}>
-              Offer your services to car owners and grow your mobile business
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  const removeVehicle = (index: number) => {
+    if (vehicles.length > 1) {
+      setVehicles(vehicles.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVehicle = (index: number, field: string, value: string) => {
+    const updatedVehicles = [...vehicles];
+    updatedVehicles[index] = {
+      ...updatedVehicles[index],
+      [field]: value,
+      // Reset model if make changes
+      ...(field === 'make' && { model: '' }),
+    };
+    setVehicles(updatedVehicles);
+  };
+
+  const handleSubmit = async () => {
+    if (!validateVehicles()) return;
+
+    try {
+      await register({
+        name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+        email: personalInfo.email,
+        password: personalInfo.password,
+        role: 'car-owner',
+      });
+      router.replace('/(tabs)');
+    } catch (error) {
+      setErrors({
+        submit: 'Registration failed. Please try again.',
+      });
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => setSelectedRole(null)}
+          onPress={handlePrevStep}
         >
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Create Account</Text>
       </View>
 
+      <ProgressSteps currentStep={step} totalSteps={2} />
+
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.roleIndicator, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {selectedRole === 'car-owner' ? (
-            <Car size={20} color={colors.primary} />
-          ) : (
-            <Wrench size={20} color={colors.secondary} />
-          )}
-          <Text style={[styles.roleIndicatorText, { color: colors.text }]}>
-            {selectedRole === 'car-owner' ? 'Car Owner' : 'Service Provider'}
-          </Text>
-        </View>
+        {step === 1 ? (
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>First Name</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.firstName ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Enter your first name"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.firstName}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, firstName: text });
+                  if (errors.firstName) {
+                    const { firstName, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+              />
+              {errors.firstName && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.firstName}</Text>
+              )}
+            </View>
 
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Join our community of {selectedRole === 'car-owner' ? 'car owners' : 'service providers'}
-        </Text>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Last Name</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.lastName ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Enter your last name"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.lastName}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, lastName: text });
+                  if (errors.lastName) {
+                    const { lastName, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+              />
+              {errors.lastName && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.lastName}</Text>
+              )}
+            </View>
 
-        <View style={styles.form}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <User size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Full Name"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.email ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Enter your email address"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.email}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, email: text });
+                  if (errors.email) {
+                    const { email, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.email}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.password ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Create a password"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.password}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, password: text });
+                  if (errors.password) {
+                    const { password, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+                secureTextEntry
+              />
+              {errors.password && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.password}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Confirm Password</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.confirmPassword ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Confirm your password"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.confirmPassword}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, confirmPassword: text });
+                  if (errors.confirmPassword) {
+                    const { confirmPassword, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+                secureTextEntry
+              />
+              {errors.confirmPassword && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.confirmPassword}</Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={handleNextStep}
+            >
+              <Text style={styles.buttonText}>Next Step</Text>
+            </TouchableOpacity>
           </View>
+        ) : (
+          <View style={styles.form}>
+            {vehicles.map((vehicle, index) => (
+              <VehicleForm
+                key={index}
+                index={index}
+                vehicle={vehicle}
+                onUpdate={updateVehicle}
+                onRemove={removeVehicle}
+                showRemove={vehicles.length > 1}
+                errors={errors}
+              />
+            ))}
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <Mail size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
+            <TouchableOpacity
+              style={[styles.addButton, { borderColor: colors.primary }]}
+              onPress={addVehicle}
+            >
+              <Plus size={20} color={colors.primary} />
+              <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                Add Another Vehicle
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.buttonText}>Complete Registration</Text>
+            </TouchableOpacity>
+
+            {errors.submit && (
+              <Text style={[styles.errorText, { color: colors.danger, textAlign: 'center', marginTop: 16 }]}>
+                {errors.submit}
+              </Text>
+            )}
           </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <Phone size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Phone Number"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.phone}
-              onChangeText={(text) => setFormData({ ...formData, phone: text })}
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <MapPin size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Location"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.location}
-              onChangeText={(text) => setFormData({ ...formData, location: text })}
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <Lock size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-            <Lock size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Confirm Password"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-              secureTextEntry
-            />
-          </View>
-
-          {error ? <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.signUpButton, { backgroundColor: colors.primary }]}
-            onPress={handleSignUp}
-          >
-            <Text style={styles.signUpButtonText}>Create Account</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Already have an account?
-          </Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={[styles.loginText, { color: colors.primary }]}> Sign In</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -222,7 +357,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
@@ -234,115 +369,55 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     fontSize: 24,
   },
-  roleContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  roleTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  roleCard: {
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  roleIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  roleCardTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  roleCardDescription: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  roleIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginHorizontal: 24,
-    marginBottom: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 8,
-  },
-  roleIndicatorText: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 14,
-  },
   content: {
     flex: 1,
   },
-  subtitle: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    marginBottom: 32,
-    paddingHorizontal: 24,
-  },
   form: {
+    padding: 16,
     gap: 16,
-    paddingHorizontal: 24,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  inputGroup: {
+    gap: 8,
   },
-  input: {
-    flex: 1,
-    marginLeft: 12,
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-  },
-  signUpButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  signUpButtonText: {
-    color: 'white',
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 24,
-    paddingHorizontal: 24,
-  },
-  footerText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-  },
-  loginText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-  },
-  errorText: {
+  label: {
     fontFamily: 'Poppins-Medium',
     fontSize: 14,
-    textAlign: 'center',
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
+  },
+  errorText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+  },
+  button: {
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: 'white',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  addButtonText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
   },
 });
