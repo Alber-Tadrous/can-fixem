@@ -29,6 +29,12 @@ export default function VehicleForm({
   const years = getYearRange();
   const models = getModelsForMake(vehicle.make);
 
+  const handleMakeChange = (value: string) => {
+    onUpdate(index, 'make', value);
+    // Reset model when make changes
+    onUpdate(index, 'model', '');
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.header}>
@@ -46,10 +52,13 @@ export default function VehicleForm({
       <View style={styles.form}>
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Make</Text>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: errors?.[`${index}-make`] ? colors.danger : colors.border }]}>
+          <View style={[styles.pickerContainer, { 
+            backgroundColor: colors.inputBackground, 
+            borderColor: errors?.[`${index}-make`] ? colors.danger : colors.border 
+          }]}>
             <Picker
               selectedValue={vehicle.make}
-              onValueChange={(value) => onUpdate(index, 'make', value)}
+              onValueChange={handleMakeChange}
               style={[styles.picker, { color: colors.text }]}
             >
               <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
@@ -65,14 +74,22 @@ export default function VehicleForm({
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Model</Text>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: errors?.[`${index}-model`] ? colors.danger : colors.border }]}>
+          <View style={[styles.pickerContainer, { 
+            backgroundColor: colors.inputBackground,
+            borderColor: errors?.[`${index}-model`] ? colors.danger : colors.border,
+            opacity: !vehicle.make ? 0.5 : 1
+          }]}>
             <Picker
               selectedValue={vehicle.model}
               onValueChange={(value) => onUpdate(index, 'model', value)}
               style={[styles.picker, { color: colors.text }]}
               enabled={!!vehicle.make}
             >
-              <Picker.Item label="Select Model" value="" color={colors.textSecondary} />
+              <Picker.Item 
+                label={vehicle.make ? "Select Model" : "Select Make First"} 
+                value="" 
+                color={colors.textSecondary} 
+              />
               {models.map((model) => (
                 <Picker.Item key={model} label={model} value={model} color={colors.text} />
               ))}
@@ -85,7 +102,10 @@ export default function VehicleForm({
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Year</Text>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: errors?.[`${index}-year`] ? colors.danger : colors.border }]}>
+          <View style={[styles.pickerContainer, { 
+            backgroundColor: colors.inputBackground,
+            borderColor: errors?.[`${index}-year`] ? colors.danger : colors.border 
+          }]}>
             <Picker
               selectedValue={vehicle.year}
               onValueChange={(value) => onUpdate(index, 'year', value)}
