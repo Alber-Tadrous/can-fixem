@@ -1,0 +1,166 @@
+-- Populate vehicle_models table with all current models
+WITH manufacturer_ids AS (
+  SELECT id, name FROM manufacturers
+)
+INSERT INTO vehicle_models (manufacturer_id, name, first_production_year, last_production_year, body_type)
+SELECT 
+  m.id,
+  v.name,
+  v.first_year,
+  v.last_year,
+  v.body_type::body_type
+FROM manufacturer_ids m
+CROSS JOIN LATERAL (
+  VALUES 
+    -- Toyota Models
+    ('Toyota', 'Avalon', 2000, NULL, 'sedan'),
+    ('Toyota', 'Camry', 2000, NULL, 'sedan'),
+    ('Toyota', 'Corolla', 2000, NULL, 'sedan'),
+    ('Toyota', 'Crown', 2023, NULL, 'sedan'),
+    ('Toyota', 'GR86', 2022, NULL, 'coupe'),
+    ('Toyota', 'GR Corolla', 2023, NULL, 'hatchback'),
+    ('Toyota', 'GR Supra', 2020, NULL, 'coupe'),
+    ('Toyota', 'Highlander', 2001, NULL, 'suv'),
+    ('Toyota', 'Prius', 2000, NULL, 'hatchback'),
+    ('Toyota', 'RAV4', 2000, NULL, 'suv'),
+    ('Toyota', 'Sequoia', 2001, NULL, 'suv'),
+    ('Toyota', 'Sienna', 2000, NULL, 'van'),
+    ('Toyota', 'Tacoma', 2000, NULL, 'truck'),
+    ('Toyota', 'Tundra', 2000, NULL, 'truck'),
+    ('Toyota', 'Venza', 2021, NULL, 'suv'),
+
+    -- Honda Models
+    ('Honda', 'Accord', 2000, NULL, 'sedan'),
+    ('Honda', 'Civic', 2000, NULL, 'sedan'),
+    ('Honda', 'CR-V', 2000, NULL, 'suv'),
+    ('Honda', 'HR-V', 2016, NULL, 'suv'),
+    ('Honda', 'Odyssey', 2000, NULL, 'van'),
+    ('Honda', 'Passport', 2019, NULL, 'suv'),
+    ('Honda', 'Pilot', 2003, NULL, 'suv'),
+    ('Honda', 'Ridgeline', 2006, NULL, 'truck'),
+
+    -- Ford Models
+    ('Ford', 'Bronco', 2021, NULL, 'suv'),
+    ('Ford', 'Bronco Sport', 2021, NULL, 'suv'),
+    ('Ford', 'Edge', 2007, NULL, 'suv'),
+    ('Ford', 'Escape', 2001, NULL, 'suv'),
+    ('Ford', 'Expedition', 2000, NULL, 'suv'),
+    ('Ford', 'Explorer', 2000, NULL, 'suv'),
+    ('Ford', 'F-150', 2000, NULL, 'truck'),
+    ('Ford', 'F-250', 2000, NULL, 'truck'),
+    ('Ford', 'F-350', 2000, NULL, 'truck'),
+    ('Ford', 'Maverick', 2022, NULL, 'truck'),
+    ('Ford', 'Mustang', 2000, NULL, 'coupe'),
+    ('Ford', 'Ranger', 2019, NULL, 'truck'),
+    ('Ford', 'Transit', 2015, NULL, 'van'),
+
+    -- Chevrolet Models
+    ('Chevrolet', 'Blazer', 2019, NULL, 'suv'),
+    ('Chevrolet', 'Bolt EV', 2017, NULL, 'hatchback'),
+    ('Chevrolet', 'Camaro', 2000, NULL, 'coupe'),
+    ('Chevrolet', 'Colorado', 2004, NULL, 'truck'),
+    ('Chevrolet', 'Corvette', 2000, NULL, 'coupe'),
+    ('Chevrolet', 'Equinox', 2005, NULL, 'suv'),
+    ('Chevrolet', 'Malibu', 2000, NULL, 'sedan'),
+    ('Chevrolet', 'Silverado 1500', 2000, NULL, 'truck'),
+    ('Chevrolet', 'Silverado 2500HD', 2000, NULL, 'truck'),
+    ('Chevrolet', 'Suburban', 2000, NULL, 'suv'),
+    ('Chevrolet', 'Tahoe', 2000, NULL, 'suv'),
+    ('Chevrolet', 'Trailblazer', 2021, NULL, 'suv'),
+    ('Chevrolet', 'Traverse', 2009, NULL, 'suv'),
+
+    -- BMW Models
+    ('BMW', '2 Series', 2014, NULL, 'coupe'),
+    ('BMW', '3 Series', 2000, NULL, 'sedan'),
+    ('BMW', '4 Series', 2014, NULL, 'coupe'),
+    ('BMW', '5 Series', 2000, NULL, 'sedan'),
+    ('BMW', '7 Series', 2000, NULL, 'sedan'),
+    ('BMW', '8 Series', 2019, NULL, 'coupe'),
+    ('BMW', 'iX', 2022, NULL, 'suv'),
+    ('BMW', 'M2', 2016, NULL, 'coupe'),
+    ('BMW', 'M3', 2000, NULL, 'sedan'),
+    ('BMW', 'M4', 2015, NULL, 'coupe'),
+    ('BMW', 'M5', 2000, NULL, 'sedan'),
+    ('BMW', 'M8', 2020, NULL, 'coupe'),
+    ('BMW', 'X1', 2013, NULL, 'suv'),
+    ('BMW', 'X2', 2018, NULL, 'suv'),
+    ('BMW', 'X3', 2004, NULL, 'suv'),
+    ('BMW', 'X4', 2015, NULL, 'suv'),
+    ('BMW', 'X5', 2000, NULL, 'suv'),
+    ('BMW', 'X6', 2008, NULL, 'suv'),
+    ('BMW', 'X7', 2019, NULL, 'suv'),
+    ('BMW', 'Z4', 2000, NULL, 'convertible'),
+
+    -- Mercedes-Benz Models
+    ('Mercedes-Benz', 'A-Class', 2019, NULL, 'sedan'),
+    ('Mercedes-Benz', 'C-Class', 2000, NULL, 'sedan'),
+    ('Mercedes-Benz', 'CLA', 2014, NULL, 'sedan'),
+    ('Mercedes-Benz', 'CLS', 2006, NULL, 'sedan'),
+    ('Mercedes-Benz', 'E-Class', 2000, NULL, 'sedan'),
+    ('Mercedes-Benz', 'EQE', 2022, NULL, 'sedan'),
+    ('Mercedes-Benz', 'EQS', 2022, NULL, 'sedan'),
+    ('Mercedes-Benz', 'G-Class', 2000, NULL, 'suv'),
+    ('Mercedes-Benz', 'GLA', 2014, NULL, 'suv'),
+    ('Mercedes-Benz', 'GLB', 2020, NULL, 'suv'),
+    ('Mercedes-Benz', 'GLC', 2016, NULL, 'suv'),
+    ('Mercedes-Benz', 'GLE', 2016, NULL, 'suv'),
+    ('Mercedes-Benz', 'GLS', 2017, NULL, 'suv'),
+    ('Mercedes-Benz', 'S-Class', 2000, NULL, 'sedan'),
+    ('Mercedes-Benz', 'SL', 2000, NULL, 'convertible'),
+
+    -- Audi Models
+    ('Audi', 'A3', 2006, NULL, 'sedan'),
+    ('Audi', 'A4', 2000, NULL, 'sedan'),
+    ('Audi', 'A5', 2008, NULL, 'coupe'),
+    ('Audi', 'A6', 2000, NULL, 'sedan'),
+    ('Audi', 'A7', 2012, NULL, 'sedan'),
+    ('Audi', 'A8', 2000, NULL, 'sedan'),
+    ('Audi', 'e-tron', 2019, NULL, 'suv'),
+    ('Audi', 'Q3', 2015, NULL, 'suv'),
+    ('Audi', 'Q4 e-tron', 2022, NULL, 'suv'),
+    ('Audi', 'Q5', 2009, NULL, 'suv'),
+    ('Audi', 'Q7', 2007, NULL, 'suv'),
+    ('Audi', 'Q8', 2019, NULL, 'suv'),
+    ('Audi', 'R8', 2008, NULL, 'coupe'),
+    ('Audi', 'RS e-tron GT', 2022, NULL, 'sedan'),
+    ('Audi', 'RS3', 2017, NULL, 'sedan'),
+    ('Audi', 'RS5', 2013, NULL, 'coupe'),
+    ('Audi', 'RS6', 2020, NULL, 'wagon'),
+    ('Audi', 'RS7', 2014, NULL, 'sedan'),
+    ('Audi', 'S3', 2015, NULL, 'sedan'),
+    ('Audi', 'S4', 2000, NULL, 'sedan'),
+    ('Audi', 'S5', 2008, NULL, 'coupe'),
+    ('Audi', 'S6', 2000, NULL, 'sedan'),
+    ('Audi', 'S7', 2013, NULL, 'sedan'),
+    ('Audi', 'S8', 2000, NULL, 'sedan'),
+    ('Audi', 'TT', 2000, NULL, 'coupe'),
+
+    -- Tesla Models
+    ('Tesla', 'Model 3', 2017, NULL, 'sedan'),
+    ('Tesla', 'Model S', 2012, NULL, 'sedan'),
+    ('Tesla', 'Model X', 2015, NULL, 'suv'),
+    ('Tesla', 'Model Y', 2020, NULL, 'suv'),
+    ('Tesla', 'Cybertruck', 2024, NULL, 'truck'),
+
+    -- Lexus Models
+    ('Lexus', 'ES', 2000, NULL, 'sedan'),
+    ('Lexus', 'GX', 2003, NULL, 'suv'),
+    ('Lexus', 'IS', 2001, NULL, 'sedan'),
+    ('Lexus', 'LC', 2018, NULL, 'coupe'),
+    ('Lexus', 'LS', 2000, NULL, 'sedan'),
+    ('Lexus', 'LX', 2000, NULL, 'suv'),
+    ('Lexus', 'NX', 2015, NULL, 'suv'),
+    ('Lexus', 'RC', 2015, NULL, 'coupe'),
+    ('Lexus', 'RX', 2000, NULL, 'suv'),
+    ('Lexus', 'UX', 2019, NULL, 'suv'),
+
+    -- Porsche Models
+    ('Porsche', '718 Boxster', 2016, NULL, 'convertible'),
+    ('Porsche', '718 Cayman', 2016, NULL, 'coupe'),
+    ('Porsche', '911', 2000, NULL, 'coupe'),
+    ('Porsche', 'Cayenne', 2003, NULL, 'suv'),
+    ('Porsche', 'Macan', 2015, NULL, 'suv'),
+    ('Porsche', 'Panamera', 2010, NULL, 'sedan'),
+    ('Porsche', 'Taycan', 2020, NULL, 'sedan')
+) v(manufacturer_name, name, first_year, last_year, body_type)
+WHERE m.name = v.manufacturer_name;
