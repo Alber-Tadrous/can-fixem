@@ -1,0 +1,22 @@
+-- Populate manufacturers table with major global car manufacturers
+INSERT INTO manufacturers (name, country, logo_url) VALUES
+('Toyota', 'Japan', 'https://images.pexels.com/photos/2394/lights-clouds-dark-car.jpg'),
+('Honda', 'Japan', 'https://images.pexels.com/photos/112460/pexels-photo-112460.jpeg'),
+('Ford', 'United States', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('BMW', 'Germany', 'https://images.pexels.com/photos/892522/pexels-photo-892522.jpeg'),
+('Mercedes-Benz', 'Germany', 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg'),
+('Volkswagen', 'Germany', 'https://images.pexels.com/photos/1149831/pexels-photo-1149831.jpeg'),
+('Audi', 'Germany', 'https://images.pexels.com/photos/1402787/pexels-photo-1402787.jpeg'),
+('Porsche', 'Germany', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Chevrolet', 'United States', 'https://images.pexels.com/photos/3729464/pexels-photo-3729464.jpeg'),
+('Hyundai', 'South Korea', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Kia', 'South Korea', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Nissan', 'Japan', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Lexus', 'Japan', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Tesla', 'United States', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Volvo', 'Sweden', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Subaru', 'Japan', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Mazda', 'Japan', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Jeep', 'United States', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Land Rover', 'United Kingdom', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg'),
+('Acura', 'Japan', 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg');
