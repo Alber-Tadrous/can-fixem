@@ -1,3 +1,4 @@
+// hooks/useVehicles.ts
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -16,7 +17,7 @@ interface VehicleModel {
 export function useVehicles() {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [models, setModels] = useState<VehicleModel[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,14 +26,18 @@ export function useVehicles() {
 
   const loadManufacturers = async () => {
     try {
-      // Try to get cached manufacturers
+      setLoading(true);
+      setError(null);
+
+      // Try to get cached manufacturers first
       const cached = await AsyncStorage.getItem('manufacturers');
       if (cached) {
-        setManufacturers(JSON.parse(cached));
+        const parsedData = JSON.parse(cached);
+        setManufacturers(parsedData);
+        setLoading(false);
       }
 
       // Fetch fresh data
-      setLoading(true);
       const response = await fetch('/api/vehicles/manufacturers');
       if (!response.ok) {
         throw new Error('Failed to fetch manufacturers');
@@ -42,6 +47,7 @@ export function useVehicles() {
       setManufacturers(data);
       await AsyncStorage.setItem('manufacturers', JSON.stringify(data));
     } catch (err) {
+      console.error('Error loading manufacturers:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -51,6 +57,9 @@ export function useVehicles() {
   const loadModels = async (manufacturerId: string) => {
     try {
       setLoading(true);
+      setError(null);
+      setModels([]); // Clear previous models
+
       const response = await fetch(`/api/vehicles/models?manufacturerId=${manufacturerId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch models');
@@ -59,6 +68,7 @@ export function useVehicles() {
       const data = await response.json();
       setModels(data);
     } catch (err) {
+      console.error('Error loading models:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -71,5 +81,6 @@ export function useVehicles() {
     loading,
     error,
     loadModels,
+    refreshManufacturers: loadManufacturers,
   };
 }
