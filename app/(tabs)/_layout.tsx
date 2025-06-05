@@ -18,12 +18,20 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
           height: Platform.OS === 'ios' ? 90 : 70,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
           fontFamily: 'Poppins-Medium',
           fontSize: 12,
+          marginTop: -4,
+        },
+        tabBarIconStyle: {
+          marginBottom: -4,
         },
         headerShown: false,
+        lazy: true,
+        freezeOnBlur: true,
       }}
     >
       <Tabs.Screen
