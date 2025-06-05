@@ -54,7 +54,7 @@ export default function VehicleForm({
               selectedValue={vehicle.make}
               onValueChange={(value) => {
                 onUpdate(index, 'make', value);
-                onUpdate(index, 'model', '');
+                onUpdate(index, 'model', ''); // Reset model when make changes
               }}
               style={[styles.picker, { color: colors.text }]}
             >
