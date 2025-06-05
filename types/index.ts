@@ -6,7 +6,11 @@ export interface User {
   avatar?: string;
   role: 'car-owner' | 'service-provider';
   phone: string;
-  location: string;
+  street1: string;
+  street2?: string;
+  city: string;
+  state: string;
+  zip: string;
   created_at?: string;
   updated_at?: string;
 }

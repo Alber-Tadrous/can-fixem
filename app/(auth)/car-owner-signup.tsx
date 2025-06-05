@@ -14,7 +14,11 @@ interface PersonalInfo {
   password: string;
   confirmPassword: string;
   phone: string;
-  location: string;
+  street1: string;
+  street2: string;
+  city: string;
+  state: string;
+  zip: string;
 }
 
 interface Vehicle {
@@ -30,7 +34,11 @@ const initialPersonalInfo: PersonalInfo = {
   password: '',
   confirmPassword: '',
   phone: '',
-  location: '',
+  street1: '',
+  street2: '',
+  city: '',
+  state: '',
+  zip: '',
 };
 
 const initialVehicle: Vehicle = {
@@ -54,6 +62,7 @@ export default function CarOwnerSignUpScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const zipRegex = /^\d{5}(-\d{4})?$/;
 
     if (!nameRegex.test(personalInfo.firstName)) {
       newErrors.firstName = 'First name must be 2-50 letters only';
@@ -73,8 +82,17 @@ export default function CarOwnerSignUpScreen() {
     if (!phoneRegex.test(personalInfo.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
-    if (!personalInfo.location.trim()) {
-      newErrors.location = 'Location is required';
+    if (!personalInfo.street1.trim()) {
+      newErrors.street1 = 'Street address is required';
+    }
+    if (!personalInfo.city.trim()) {
+      newErrors.city = 'City is required';
+    }
+    if (!personalInfo.state.trim()) {
+      newErrors.state = 'State is required';
+    }
+    if (!zipRegex.test(personalInfo.zip)) {
+      newErrors.zip = 'Please enter a valid ZIP code';
     }
 
     setErrors(newErrors);
@@ -123,7 +141,11 @@ export default function CarOwnerSignUpScreen() {
         email: personalInfo.email,
         password: personalInfo.password,
         phone: personalInfo.phone,
-        location: personalInfo.location,
+        street1: personalInfo.street1,
+        street2: personalInfo.street2,
+        city: personalInfo.city,
+        state: personalInfo.state,
+        zip: personalInfo.zip,
         role: 'car-owner',
       });
       router.replace('/(tabs)');
@@ -282,30 +304,135 @@ export default function CarOwnerSignUpScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Location</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Street Address</Text>
               <TextInput
                 style={[
                   styles.input,
                   { 
                     backgroundColor: colors.inputBackground,
-                    borderColor: errors.location ? colors.danger : colors.border,
+                    borderColor: errors.street1 ? colors.danger : colors.border,
                     color: colors.text,
                   }
                 ]}
-                placeholder="Enter your location"
+                placeholder="Enter your street address"
                 placeholderTextColor={colors.textSecondary}
-                value={personalInfo.location}
+                value={personalInfo.street1}
                 onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, location: text });
-                  if (errors.location) {
-                    const { location, ...rest } = errors;
+                  setPersonalInfo({ ...personalInfo, street1: text });
+                  if (errors.street1) {
+                    const { street1, ...rest } = errors;
                     setErrors(rest);
                   }
                 }}
               />
-              {errors.location && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.location}</Text>
+              {errors.street1 && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.street1}</Text>
               )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Apartment, Suite, etc. (optional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="Enter apartment or suite number"
+                placeholderTextColor={colors.textSecondary}
+                value={personalInfo.street2}
+                onChangeText={(text) => {
+                  setPersonalInfo({ ...personalInfo, street2: text });
+                }}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.flex1]}>
+                <Text style={[styles.label, { color: colors.text }]}>City</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      borderColor: errors.city ? colors.danger : colors.border,
+                      color: colors.text,
+                    }
+                  ]}
+                  placeholder="City"
+                  placeholderTextColor={colors.textSecondary}
+                  value={personalInfo.city}
+                  onChangeText={(text) => {
+                    setPersonalInfo({ ...personalInfo, city: text });
+                    if (errors.city) {
+                      const { city, ...rest } = errors;
+                      setErrors(rest);
+                    }
+                  }}
+                />
+                {errors.city && (
+                  <Text style={[styles.errorText, { color: colors.danger }]}>{errors.city}</Text>
+                )}
+              </View>
+
+              <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
+                <Text style={[styles.label, { color: colors.text }]}>State</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      borderColor: errors.state ? colors.danger : colors.border,
+                      color: colors.text,
+                    }
+                  ]}
+                  placeholder="State"
+                  placeholderTextColor={colors.textSecondary}
+                  value={personalInfo.state}
+                  onChangeText={(text) => {
+                    setPersonalInfo({ ...personalInfo, state: text });
+                    if (errors.state) {
+                      const { state, ...rest } = errors;
+                      setErrors(rest);
+                    }
+                  }}
+                />
+                {errors.state && (
+                  <Text style={[styles.errorText, { color: colors.danger }]}>{errors.state}</Text>
+                )}
+              </View>
+
+              <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
+                <Text style={[styles.label, { color: colors.text }]}>ZIP Code</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      borderColor: errors.zip ? colors.danger : colors.border,
+                      color: colors.text,
+                    }
+                  ]}
+                  placeholder="ZIP"
+                  placeholderTextColor={colors.textSecondary}
+                  value={personalInfo.zip}
+                  onChangeText={(text) => {
+                    setPersonalInfo({ ...personalInfo, zip: text });
+                    if (errors.zip) {
+                      const { zip, ...rest } = errors;
+                      setErrors(rest);
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+                {errors.zip && (
+                  <Text style={[styles.errorText, { color: colors.danger }]}>{errors.zip}</Text>
+                )}
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -482,5 +609,15 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontFamily: 'Poppins-Medium',
     fontSize: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flex1: {
+    flex: 1,
+  },
+  marginLeft: {
+    marginLeft: 8,
   },
 });
