@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@/types';
 
 interface AuthContextProps {
@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   async function checkUser() {
     try {
-      const session = await SecureStore.getItemAsync('session');
+      const session = await AsyncStorage.getItem('session');
       if (session) {
         const { data: { user } } = await supabase.auth.getUser(session);
         if (user) {
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (session) {
-        await SecureStore.setItemAsync('session', session.access_token);
+        await AsyncStorage.setItem('session', session.access_token);
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (session) {
-        await SecureStore.setItemAsync('session', session.access_token);
+        await AsyncStorage.setItem('session', session.access_token);
         
         const { error: profileError } = await supabase
           .from('profiles')
@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      await SecureStore.deleteItemAsync('session');
+      await AsyncStorage.removeItem('session');
       setUser(null);
     } catch (error) {
       console.error('Error logging out:', error);
