@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Picker } from '@react-native-picker/picker';
-import { carMakes, getModelsForMake, getYearRange } from '@/data/carMakes';
+import { useVehicles } from '@/hooks/useVehicles';
+import { useEffect } from 'react';
 
 interface VehicleFormProps {
   index: number;
@@ -26,8 +27,22 @@ export default function VehicleForm({
   errors,
 }: VehicleFormProps) {
   const { colors } = useTheme();
-  const years = getYearRange();
-  const models = vehicle.make ? getModelsForMake(vehicle.make) : [];
+  const { manufacturers, models, loading, error, loadModels } = useVehicles();
+
+  useEffect(() => {
+    if (vehicle.make) {
+      const manufacturer = manufacturers.find(m => m.name === vehicle.make);
+      if (manufacturer) {
+        loadModels(manufacturer.id);
+      }
+    }
+  }, [vehicle.make]);
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from(
+    { length: currentYear - 1900 + 1 },
+    (_, i) => (currentYear - i).toString()
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -59,8 +74,8 @@ export default function VehicleForm({
               style={[styles.picker, { color: colors.text }]}
             >
               <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
-              {carMakes.map((make) => (
-                <Picker.Item key={make} label={make} value={make} color={colors.text} />
+              {manufacturers.map((make) => (
+                <Picker.Item key={make.id} label={make.name} value={make.name} color={colors.text} />
               ))}
             </Picker>
           </View>
@@ -88,7 +103,7 @@ export default function VehicleForm({
                 color={colors.textSecondary} 
               />
               {models.map((model) => (
-                <Picker.Item key={model} label={model} value={model} color={colors.text} />
+                <Picker.Item key={model.id} label={model.name} value={model.name} color={colors.text} />
               ))}
             </Picker>
           </View>
@@ -101,16 +116,22 @@ export default function VehicleForm({
           <Text style={[styles.label, { color: colors.text }]}>Year</Text>
           <View style={[styles.pickerContainer, { 
             backgroundColor: colors.inputBackground,
-            borderColor: errors?.[`${index}-year`] ? colors.danger : colors.border 
+            borderColor: errors?.[`${index}-year`] ? colors.danger : colors.border,
+            opacity: !vehicle.model ? 0.5 : 1
           }]}>
             <Picker
               selectedValue={vehicle.year}
               onValueChange={(value) => onUpdate(index, 'year', value)}
               style={[styles.picker, { color: colors.text }]}
+              enabled={!!vehicle.model}
             >
-              <Picker.Item label="Select Year" value="" color={colors.textSecondary} />
+              <Picker.Item 
+                label={vehicle.model ? "Select Year" : "Select Model First"} 
+                value="" 
+                color={colors.textSecondary} 
+              />
               {years.map((year) => (
-                <Picker.Item key={year} label={year.toString()} value={year.toString()} color={colors.text} />
+                <Picker.Item key={year} label={year} value={year} color={colors.text} />
               ))}
             </Picker>
           </View>
