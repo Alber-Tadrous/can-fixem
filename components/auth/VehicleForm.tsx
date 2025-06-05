@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+// components/auth/VehicleForm.tsx
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Picker } from '@react-native-picker/picker';
@@ -44,17 +45,26 @@ export default function VehicleForm({
     (_, i) => (currentYear - i).toString()
   );
 
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.danger }]}>
+        <Text style={[styles.errorText, { color: colors.danger }]}>
+          Error loading vehicle data. Please try again.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Vehicle {index + 1}</Text>
         {showRemove && (
-          <TouchableOpacity
-            style={[styles.removeButton, { backgroundColor: colors.danger + '20' }]}
+          <Trash2 
+            size={20} 
+            color={colors.danger} 
             onPress={() => onRemove(index)}
-          >
-            <Trash2 size={20} color={colors.danger} />
-          </TouchableOpacity>
+          />
         )}
       </View>
 
@@ -65,19 +75,23 @@ export default function VehicleForm({
             backgroundColor: colors.inputBackground, 
             borderColor: errors?.[`${index}-make`] ? colors.danger : colors.border 
           }]}>
-            <Picker
-              selectedValue={vehicle.make}
-              onValueChange={(value) => {
-                onUpdate(index, 'make', value);
-                onUpdate(index, 'model', '');
-              }}
-              style={[styles.picker, { color: colors.text }]}
-            >
-              <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
-              {manufacturers.map((make) => (
-                <Picker.Item key={make.id} label={make.name} value={make.name} color={colors.text} />
-              ))}
-            </Picker>
+            {loading ? (
+              <ActivityIndicator style={styles.loading} color={colors.primary} />
+            ) : (
+              <Picker
+                selectedValue={vehicle.make}
+                onValueChange={(value) => {
+                  onUpdate(index, 'make', value);
+                  onUpdate(index, 'model', '');
+                }}
+                style={[styles.picker, { color: colors.text }]}
+              >
+                <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
+                {manufacturers.map((make) => (
+                  <Picker.Item key={make.id} label={make.name} value={make.name} color={colors.text} />
+                ))}
+              </Picker>
+            )}
           </View>
           {errors?.[`${index}-make`] && (
             <Text style={[styles.errorText, { color: colors.danger }]}>{errors[`${index}-make`]}</Text>
@@ -161,10 +175,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
   },
-  removeButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
   form: {
     gap: 16,
   },
@@ -186,5 +196,8 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
+  },
+  loading: {
+    padding: 12,
   },
 });
