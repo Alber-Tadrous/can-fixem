@@ -27,7 +27,13 @@ export default function VehicleForm({
 }: VehicleFormProps) {
   const { colors } = useTheme();
   const years = getYearRange();
-  const models = vehicle.make ? getModelsForMake(vehicle.make) : [];
+  const models = getModelsForMake(vehicle.make);
+
+  const handleMakeChange = (value: string) => {
+    onUpdate(index, 'make', value);
+    // Reset model when make changes
+    onUpdate(index, 'model', '');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -52,10 +58,7 @@ export default function VehicleForm({
           }]}>
             <Picker
               selectedValue={vehicle.make}
-              onValueChange={(value) => {
-                onUpdate(index, 'make', value);
-                onUpdate(index, 'model', ''); // Reset model when make changes
-              }}
+              onValueChange={handleMakeChange}
               style={[styles.picker, { color: colors.text }]}
             >
               <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
