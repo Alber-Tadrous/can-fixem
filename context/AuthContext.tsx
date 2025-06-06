@@ -203,13 +203,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Wait for the auth user to be fully created
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Build location string from address components
+      // Build location string from address components (if provided)
       let location = '';
-      if (userData.street1) {
-        location = userData.street1;
-        if (userData.city) location += `, ${userData.city}`;
-        if (userData.state) location += `, ${userData.state}`;
+      if (userData.city && userData.state) {
+        location = `${userData.city}, ${userData.state}`;
         if (userData.zip) location += ` ${userData.zip}`;
+      } else if (userData.city) {
+        location = userData.city;
+      } else if (userData.state) {
+        location = userData.state;
+      } else {
+        location = 'United States'; // Default location
       }
 
       // Create the profile with better error handling
