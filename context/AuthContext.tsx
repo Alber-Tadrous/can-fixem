@@ -42,6 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
           if (error) {
             console.error('Error fetching profile:', error);
+            // If profile doesn't exist, user might need to complete registration
+            if (error.code === 'PGRST116') {
+              console.log('Profile not found - user may need to complete registration');
+            }
           } else if (profile) {
             setUser(profile);
           }
@@ -77,6 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (profileError) {
           console.error('Error fetching profile:', profileError);
+          if (profileError.code === 'PGRST116') {
+            console.log('Profile not found - user may need to complete registration');
+          }
         } else if (profile) {
           setUser(profile);
         }
@@ -130,8 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       console.log('Starting registration for:', userData.email);
       
+      // Check if email already exists
+      const { data: existingUser } = await supabase.auth.getUser();
+      if (existingUser?.user?.email === userData.email) {
+        throw new Error('An account with this email already exists');
+      }
+
       // First, sign up the user
-      const { data: { session }, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: userData.email!,
         password: userData.password!,
         options: {
@@ -144,18 +157,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (signUpError) {
         console.error('Signup error:', signUpError);
+        
+        // Handle specific error cases
+        if (signUpError.message.includes('already registered')) {
+          throw new Error('An account with this email already exists');
+        } else if (signUpError.message.includes('password')) {
+          throw new Error('Password must be at least 6 characters long');
+        } else if (signUpError.message.includes('email')) {
+          throw new Error('Please enter a valid email address');
+        }
+        
         throw new Error(signUpError.message);
       }
 
-      if (!session?.user) {
+      if (!authData?.user) {
         throw new Error('Registration failed - no user session created');
       }
 
-      console.log('User signed up successfully:', session.user.id);
+      console.log('User signed up successfully:', authData.user.id);
 
-      // Create the profile
+      // Create the profile with better error handling
       const profileData = {
-        id: session.user.id,
+        id: authData.user.id,
         name: userData.name!,
         email: userData.email!,
         phone: userData.phone || '',
@@ -169,6 +192,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Creating profile with data:', profileData);
 
+      // Wait a moment for the auth user to be fully created
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert([profileData])
@@ -177,8 +203,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
+        
         // If profile creation fails, we should clean up the auth user
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } catch (cleanupError) {
+          console.error('Error cleaning up auth user:', cleanupError);
+        }
+        
+        // Handle specific profile creation errors
+        if (profileError.code === '23505') {
+          throw new Error('An account with this email already exists');
+        } else if (profileError.message.includes('permission')) {
+          throw new Error('Permission denied. Please try again.');
+        }
+        
         throw new Error(`Failed to create profile: ${profileError.message}`);
       }
 

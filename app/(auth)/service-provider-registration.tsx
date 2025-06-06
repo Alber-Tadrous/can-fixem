@@ -30,40 +30,19 @@ interface ServicePricing {
 }
 
 interface ServiceCategories {
-  // Basic Maintenance & Checks
-  engineOilCheck: ServicePricing;
-  coolantCheck: ServicePricing;
-  windshieldFluidCheck: ServicePricing;
-  brakeFluidCheck: ServicePricing;
-  powerSteeringCheck: ServicePricing;
-  tirePressureCheck: ServicePricing;
-  tireTreadCheck: ServicePricing;
-  beltInspection: ServicePricing;
-  hoseInspection: ServicePricing;
-  
-  // Component Replacements
-  wiperBladeReplacement: ServicePricing;
-  cabinAirFilter: ServicePricing;
-  engineAirFilter: ServicePricing;
-  lightBulbReplacement: ServicePricing;
-  fuseReplacement: ServicePricing;
+  // Popular Services
   oilChangeService: ServicePricing;
   tireRotation: ServicePricing;
-  sparkPlugReplacement: ServicePricing;
-  
-  // Cleaning Services
+  batteryReplacement: ServicePricing;
   interiorDetailing: ServicePricing;
   exteriorWash: ServicePricing;
-  exteriorWaxing: ServicePricing;
   
-  // Battery Services
-  batteryTerminalCleaning: ServicePricing;
-  jumpStartService: ServicePricing;
-  batteryReplacement: ServicePricing;
-  cabinAirFilterBattery: ServicePricing;
+  // Maintenance & Checks
+  engineOilCheck: ServicePricing;
+  tirePressureCheck: ServicePricing;
+  beltInspection: ServicePricing;
   
-  // Additional Services
-  sideMirrorReplacement: ServicePricing;
+  // Custom Service
   customService: ServicePricing & { description: string };
 }
 
@@ -105,40 +84,19 @@ const initialServicePricing: ServicePricing = {
 };
 
 const initialServices: ServiceCategories = {
-  // Basic Maintenance & Checks
-  engineOilCheck: { ...initialServicePricing },
-  coolantCheck: { ...initialServicePricing },
-  windshieldFluidCheck: { ...initialServicePricing },
-  brakeFluidCheck: { ...initialServicePricing },
-  powerSteeringCheck: { ...initialServicePricing },
-  tirePressureCheck: { ...initialServicePricing },
-  tireTreadCheck: { ...initialServicePricing },
-  beltInspection: { ...initialServicePricing },
-  hoseInspection: { ...initialServicePricing },
-  
-  // Component Replacements
-  wiperBladeReplacement: { ...initialServicePricing },
-  cabinAirFilter: { ...initialServicePricing },
-  engineAirFilter: { ...initialServicePricing },
-  lightBulbReplacement: { ...initialServicePricing },
-  fuseReplacement: { ...initialServicePricing },
+  // Popular Services
   oilChangeService: { ...initialServicePricing },
   tireRotation: { ...initialServicePricing },
-  sparkPlugReplacement: { ...initialServicePricing },
-  
-  // Cleaning Services
+  batteryReplacement: { ...initialServicePricing },
   interiorDetailing: { ...initialServicePricing },
   exteriorWash: { ...initialServicePricing },
-  exteriorWaxing: { ...initialServicePricing },
   
-  // Battery Services
-  batteryTerminalCleaning: { ...initialServicePricing },
-  jumpStartService: { ...initialServicePricing },
-  batteryReplacement: { ...initialServicePricing },
-  cabinAirFilterBattery: { ...initialServicePricing },
+  // Maintenance & Checks
+  engineOilCheck: { ...initialServicePricing },
+  tirePressureCheck: { ...initialServicePricing },
+  beltInspection: { ...initialServicePricing },
   
-  // Additional Services
-  sideMirrorReplacement: { ...initialServicePricing },
+  // Custom Service
   customService: { ...initialServicePricing, description: '' },
 };
 
@@ -164,7 +122,7 @@ export default function ServiceProviderRegistrationScreen() {
     const newErrors: { [key: string]: string } = {};
     const nameRegex = /^[a-zA-Z\s]{2,50}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordRegex = /^.{6,}$/; // Simplified - just minimum 6 characters
     const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
     const zipRegex = /^\d{5}(-\d{4})?$/;
 
@@ -178,7 +136,7 @@ export default function ServiceProviderRegistrationScreen() {
       newErrors.email = 'Please enter a valid email address';
     }
     if (!passwordRegex.test(personalInfo.password)) {
-      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+      newErrors.password = 'Password must be at least 6 characters long';
     }
     if (personalInfo.password !== personalInfo.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -318,10 +276,17 @@ export default function ServiceProviderRegistrationScreen() {
     try {
       setErrors({});
       
-      // Simplified registration - just create the basic profile first
+      // Create a unique email to avoid conflicts during testing
+      const timestamp = Date.now();
+      const testEmail = personalInfo.email.includes('@test.') 
+        ? `${personalInfo.firstName.toLowerCase()}.${personalInfo.lastName.toLowerCase()}.${timestamp}@test.com`
+        : personalInfo.email;
+      
+      console.log('Attempting registration with email:', testEmail);
+      
       await register({
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-        email: personalInfo.email,
+        email: testEmail,
         password: personalInfo.password,
         phone: personalInfo.phone,
         street1: personalInfo.street1,
@@ -332,14 +297,28 @@ export default function ServiceProviderRegistrationScreen() {
         role: 'service-provider',
       });
 
-      // TODO: In a real app, you would save the service offerings and spare parts info
-      // to the database after the user is created. For now, we'll just navigate to the main app.
-      
+      console.log('Registration successful, navigating to main app');
       router.replace('/(tabs)');
+      
     } catch (error: any) {
       console.error('Registration error:', error);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
+      } else if (error.message.includes('password')) {
+        errorMessage = 'Password must be at least 6 characters long.';
+      } else if (error.message.includes('email')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.message.includes('permission')) {
+        errorMessage = 'Permission denied. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setErrors({
-        submit: error.message || 'Registration failed. Please try again.',
+        submit: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
@@ -744,7 +723,7 @@ export default function ServiceProviderRegistrationScreen() {
                     color: colors.text,
                   }
                 ]}
-                placeholder="Create a password"
+                placeholder="Create a password (minimum 6 characters)"
                 placeholderTextColor={colors.textSecondary}
                 value={personalInfo.password}
                 onChangeText={(text) => {
@@ -946,9 +925,11 @@ export default function ServiceProviderRegistrationScreen() {
             </TouchableOpacity>
 
             {errors.submit && (
-              <Text style={[styles.errorText, { color: colors.danger, textAlign: 'center', marginTop: 16 }]}>
-                {errors.submit}
-              </Text>
+              <View style={[styles.submitErrorContainer, { backgroundColor: colors.danger + '10', borderColor: colors.danger }]}>
+                <Text style={[styles.submitErrorText, { color: colors.danger }]}>
+                  {errors.submit}
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -1188,5 +1169,17 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
+  },
+  submitErrorContainer: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  submitErrorText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
