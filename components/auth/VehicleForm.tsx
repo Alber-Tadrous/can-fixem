@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Picker } from '@react-native-picker/picker';
@@ -21,6 +21,8 @@ interface VehicleFormProps {
     make: string;
     model: string;
     year: string;
+    color: string;
+    licensePlate: string;
   };
   onUpdate: (index: number, field: string, value: string) => void;
   onRemove: (index: number) => void;
@@ -225,6 +227,50 @@ export default function VehicleForm({
             <Text style={[styles.errorText, { color: colors.danger }]}>{errors[`${index}-year`]}</Text>
           )}
         </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: colors.text }]}>Color</Text>
+          <TextInput
+            style={[
+              styles.input,
+              { 
+                backgroundColor: colors.inputBackground,
+                borderColor: errors?.[`${index}-color`] ? colors.danger : colors.border,
+                color: colors.text,
+              }
+            ]}
+            placeholder="e.g., Red, Blue, Silver"
+            placeholderTextColor={colors.textSecondary}
+            value={vehicle.color}
+            onChangeText={(value) => onUpdate(index, 'color', value)}
+          />
+          {errors?.[`${index}-color`] && (
+            <Text style={[styles.errorText, { color: colors.danger }]}>{errors[`${index}-color`]}</Text>
+          )}
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: colors.text }]}>License Plate</Text>
+          <TextInput
+            style={[
+              styles.input,
+              { 
+                backgroundColor: colors.inputBackground,
+                borderColor: errors?.[`${index}-licensePlate`] ? colors.danger : colors.border,
+                color: colors.text,
+              }
+            ]}
+            placeholder="e.g., ABC123"
+            placeholderTextColor={colors.textSecondary}
+            value={vehicle.licensePlate}
+            onChangeText={(value) => onUpdate(index, 'licensePlate', value.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={8}
+          />
+          {errors?.[`${index}-licensePlate`] && (
+            <Text style={[styles.errorText, { color: colors.danger }]}>{errors[`${index}-licensePlate`]}</Text>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -287,6 +333,14 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 48,
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 16,
   },
   errorText: {
     fontFamily: 'Poppins-Regular',

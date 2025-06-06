@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import ProgressSteps from '@/components/auth/ProgressSteps';
 import VehicleForm from '@/components/auth/VehicleForm';
@@ -25,6 +26,8 @@ interface Vehicle {
   make: string;
   model: string;
   year: string;
+  color: string;
+  licensePlate: string;
 }
 
 const initialPersonalInfo: PersonalInfo = {
@@ -45,6 +48,8 @@ const initialVehicle: Vehicle = {
   make: '',
   model: '',
   year: '',
+  color: '',
+  licensePlate: '',
 };
 
 export default function CarOwnerSignUpScreen() {
@@ -55,6 +60,7 @@ export default function CarOwnerSignUpScreen() {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(initialPersonalInfo);
   const [vehicles, setVehicles] = useState<Vehicle[]>([{ ...initialVehicle }]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validatePersonalInfo = () => {
     const newErrors: { [key: string]: string } = {};
@@ -101,6 +107,7 @@ export default function CarOwnerSignUpScreen() {
 
   const validateVehicles = () => {
     const newErrors: { [key: string]: string } = {};
+    const licensePlateRegex = /^[A-Z0-9-]{2,8}$/i;
     
     vehicles.forEach((vehicle, index) => {
       if (!vehicle.make) {
@@ -111,6 +118,14 @@ export default function CarOwnerSignUpScreen() {
       }
       if (!vehicle.year) {
         newErrors[`${index}-year`] = 'Year is required';
+      }
+      if (!vehicle.color.trim()) {
+        newErrors[`${index}-color`] = 'Color is required';
+      }
+      if (!vehicle.licensePlate.trim()) {
+        newErrors[`${index}-licensePlate`] = 'License plate is required';
+      } else if (!licensePlateRegex.test(vehicle.licensePlate)) {
+        newErrors[`${index}-licensePlate`] = 'Please enter a valid license plate';
       }
     });
 
@@ -132,32 +147,94 @@ export default function CarOwnerSignUpScreen() {
     }
   };
 
-  // In car-owner-signup.tsx
-const handleSubmit = async () => {
-  if (!validateVehicles()) return;
+  const saveVehiclesToDatabase = async (userId: string) => {
+    try {
+      // Get manufacturer and model names for the vehicles
+      const vehicleData = await Promise.all(
+        vehicles.map(async (vehicle) => {
+          // Get manufacturer name
+          const { data: manufacturer } = await supabase
+            .from('manufacturers')
+            .select('name')
+            .eq('id', vehicle.make)
+            .single();
 
-  try {
-    setErrors({}); // Clear previous errors
-    await register({
-      name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-      email: personalInfo.email,
-      password: personalInfo.password,
-      phone: personalInfo.phone,
-      street1: personalInfo.street1,
-      street2: personalInfo.street2,
-      city: personalInfo.city,
-      state: personalInfo.state,
-      zip: personalInfo.zip,
-      role: 'car-owner',
-    });
-    router.replace('/(tabs)');
-  } catch (error: any) {
-    console.error('Registration error:', error);
-    setErrors({
-      submit: error.message || 'Registration failed. Please try again.',
-    });
-  }
-};
+          // Get model name
+          const { data: model } = await supabase
+            .from('vehicle_models')
+            .select('name')
+            .eq('id', vehicle.model)
+            .single();
+
+          return {
+            owner_id: userId,
+            make: manufacturer?.name || vehicle.make,
+            model: model?.name || vehicle.model,
+            year: parseInt(vehicle.year),
+            color: vehicle.color,
+            license_plate: vehicle.licensePlate.toUpperCase(),
+          };
+        })
+      );
+
+      // Insert all vehicles
+      const { error: vehicleError } = await supabase
+        .from('cars')
+        .insert(vehicleData);
+
+      if (vehicleError) {
+        console.error('Error saving vehicles:', vehicleError);
+        throw new Error('Failed to save vehicle information');
+      }
+
+      console.log('Vehicles saved successfully:', vehicleData);
+    } catch (error) {
+      console.error('Error in saveVehiclesToDatabase:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateVehicles()) return;
+
+    setIsSubmitting(true);
+    try {
+      setErrors({}); // Clear previous errors
+      
+      // First, register the user
+      await register({
+        name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+        email: personalInfo.email,
+        password: personalInfo.password,
+        phone: personalInfo.phone,
+        street1: personalInfo.street1,
+        street2: personalInfo.street2,
+        city: personalInfo.city,
+        state: personalInfo.state,
+        zip: personalInfo.zip,
+        role: 'car-owner',
+      });
+
+      // Get the current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User registration failed');
+      }
+
+      // Save vehicles to database
+      await saveVehiclesToDatabase(user.id);
+
+      // Navigate to main app
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      setErrors({
+        submit: error.message || 'Registration failed. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const addVehicle = () => {
     setVehicles([...vehicles, { ...initialVehicle }]);
@@ -181,6 +258,7 @@ const handleSubmit = async () => {
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={handleBack}
+          disabled={isSubmitting}
         >
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
@@ -518,6 +596,7 @@ const handleSubmit = async () => {
             <TouchableOpacity
               style={[styles.addButton, { borderColor: colors.primary }]}
               onPress={addVehicle}
+              disabled={isSubmitting}
             >
               <Plus size={20} color={colors.primary} />
               <Text style={[styles.addButtonText, { color: colors.primary }]}>
@@ -526,10 +605,19 @@ const handleSubmit = async () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary }]}
+              style={[
+                styles.button, 
+                { 
+                  backgroundColor: isSubmitting ? colors.textSecondary : colors.primary,
+                  opacity: isSubmitting ? 0.7 : 1
+                }
+              ]}
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.buttonText}>
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+              </Text>
             </TouchableOpacity>
 
             {errors.submit && (
