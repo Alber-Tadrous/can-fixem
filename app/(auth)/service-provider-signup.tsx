@@ -13,7 +13,11 @@ interface ServiceProviderInfo {
   confirmPassword: string;
   businessName: string;
   phone: string;
-  location: string;
+  street1: string;
+  street2: string;
+  city: string;
+  state: string;
+  zip: string;
 }
 
 const initialInfo: ServiceProviderInfo = {
@@ -24,7 +28,11 @@ const initialInfo: ServiceProviderInfo = {
   confirmPassword: '',
   businessName: '',
   phone: '',
-  location: '',
+  street1: '',
+  street2: '',
+  city: '',
+  state: '',
+  zip: '',
 };
 
 export default function ServiceProviderSignUpScreen() {
@@ -40,6 +48,7 @@ export default function ServiceProviderSignUpScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const zipRegex = /^\d{5}(-\d{4})?$/;
 
     if (!nameRegex.test(info.firstName)) {
       newErrors.firstName = 'First name must be 2-50 letters only';
@@ -62,8 +71,17 @@ export default function ServiceProviderSignUpScreen() {
     if (!phoneRegex.test(info.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
-    if (!info.location.trim()) {
-      newErrors.location = 'Location is required';
+    if (!info.street1.trim()) {
+      newErrors.street1 = 'Street address is required';
+    }
+    if (!info.city.trim()) {
+      newErrors.city = 'City is required';
+    }
+    if (!info.state.trim()) {
+      newErrors.state = 'State is required';
+    }
+    if (!zipRegex.test(info.zip)) {
+      newErrors.zip = 'Please enter a valid ZIP code';
     }
 
     setErrors(newErrors);
@@ -74,18 +92,24 @@ export default function ServiceProviderSignUpScreen() {
     if (!validateForm()) return;
 
     try {
+      setErrors({}); // Clear previous errors
       await register({
         name: `${info.firstName} ${info.lastName}`,
         email: info.email,
         password: info.password,
         phone: info.phone,
-        location: info.location,
+        street1: info.street1,
+        street2: info.street2,
+        city: info.city,
+        state: info.state,
+        zip: info.zip,
         role: 'service-provider',
       });
       router.replace('/(tabs)');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Registration error:', error);
       setErrors({
-        submit: 'Registration failed. Please try again.',
+        submit: error.message || 'Registration failed. Please try again.',
       });
     }
   };
@@ -246,30 +270,135 @@ export default function ServiceProviderSignUpScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Location</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Street Address</Text>
             <TextInput
               style={[
                 styles.input,
                 { 
                   backgroundColor: colors.inputBackground,
-                  borderColor: errors.location ? colors.danger : colors.border,
+                  borderColor: errors.street1 ? colors.danger : colors.border,
                   color: colors.text,
                 }
               ]}
-              placeholder="Enter your service area"
+              placeholder="Enter your street address"
               placeholderTextColor={colors.textSecondary}
-              value={info.location}
+              value={info.street1}
               onChangeText={(text) => {
-                setInfo({ ...info, location: text });
-                if (errors.location) {
-                  const { location, ...rest } = errors;
+                setInfo({ ...info, street1: text });
+                if (errors.street1) {
+                  const { street1, ...rest } = errors;
                   setErrors(rest);
                 }
               }}
             />
-            {errors.location && (
-              <Text style={[styles.errorText, { color: colors.danger }]}>{errors.location}</Text>
+            {errors.street1 && (
+              <Text style={[styles.errorText, { color: colors.danger }]}>{errors.street1}</Text>
             )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Apartment, Suite, etc. (optional)</Text>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                }
+              ]}
+              placeholder="Enter apartment or suite number"
+              placeholderTextColor={colors.textSecondary}
+              value={info.street2}
+              onChangeText={(text) => {
+                setInfo({ ...info, street2: text });
+              }}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, styles.flex1]}>
+              <Text style={[styles.label, { color: colors.text }]}>City</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.city ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="City"
+                placeholderTextColor={colors.textSecondary}
+                value={info.city}
+                onChangeText={(text) => {
+                  setInfo({ ...info, city: text });
+                  if (errors.city) {
+                    const { city, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+              />
+              {errors.city && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.city}</Text>
+              )}
+            </View>
+
+            <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
+              <Text style={[styles.label, { color: colors.text }]}>State</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.state ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="State"
+                placeholderTextColor={colors.textSecondary}
+                value={info.state}
+                onChangeText={(text) => {
+                  setInfo({ ...info, state: text });
+                  if (errors.state) {
+                    const { state, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+              />
+              {errors.state && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.state}</Text>
+              )}
+            </View>
+
+            <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
+              <Text style={[styles.label, { color: colors.text }]}>ZIP Code</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: errors.zip ? colors.danger : colors.border,
+                    color: colors.text,
+                  }
+                ]}
+                placeholder="ZIP"
+                placeholderTextColor={colors.textSecondary}
+                value={info.zip}
+                onChangeText={(text) => {
+                  setInfo({ ...info, zip: text });
+                  if (errors.zip) {
+                    const { zip, ...rest } = errors;
+                    setErrors(rest);
+                  }
+                }}
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              {errors.zip && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.zip}</Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -400,5 +529,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: 'white',
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flex1: {
+    flex: 1,
+  },
+  marginLeft: {
+    marginLeft: 8,
   },
 });
