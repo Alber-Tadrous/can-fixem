@@ -16,11 +16,6 @@ interface PersonalInfo {
   confirmPassword: string;
   phone: string;
   profilePhoto: string | null;
-  street1: string;
-  street2: string;
-  city: string;
-  state: string;
-  zip: string;
 }
 
 interface ServicePricing {
@@ -52,16 +47,6 @@ interface SparePartsInfo {
   deliveryTime: string;
 }
 
-const US_STATES = [
-  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
-  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
-  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
-  'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
-  'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
-  'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
-  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
-];
-
 const initialPersonalInfo: PersonalInfo = {
   firstName: '',
   lastName: '',
@@ -70,11 +55,6 @@ const initialPersonalInfo: PersonalInfo = {
   confirmPassword: '',
   phone: '',
   profilePhoto: null,
-  street1: '',
-  street2: '',
-  city: '',
-  state: '',
-  zip: '',
 };
 
 const initialServicePricing: ServicePricing = {
@@ -124,7 +104,6 @@ export default function ServiceProviderRegistrationScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^.{6,}$/; // Simplified - just minimum 6 characters
     const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
-    const zipRegex = /^\d{5}(-\d{4})?$/;
 
     if (!nameRegex.test(personalInfo.firstName)) {
       newErrors.firstName = 'First name must be 2-50 characters, letters only';
@@ -143,18 +122,6 @@ export default function ServiceProviderRegistrationScreen() {
     }
     if (!phoneRegex.test(personalInfo.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
-    }
-    if (!personalInfo.street1.trim() || personalInfo.street1.length < 5) {
-      newErrors.street1 = 'Street address must be at least 5 characters';
-    }
-    if (!personalInfo.city.trim() || personalInfo.city.length < 2) {
-      newErrors.city = 'City must be at least 2 characters';
-    }
-    if (!personalInfo.state) {
-      newErrors.state = 'State is required';
-    }
-    if (!zipRegex.test(personalInfo.zip)) {
-      newErrors.zip = 'Please enter a valid ZIP code';
     }
 
     setErrors(newErrors);
@@ -288,17 +255,12 @@ export default function ServiceProviderRegistrationScreen() {
           description: key === 'customService' ? service.description : undefined,
         }));
 
-      // Build the registration data
+      // Build the registration data - only include fields that exist in the profile schema
       const registrationData = {
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
         email: personalInfo.email,
         password: personalInfo.password,
         phone: personalInfo.phone,
-        street1: personalInfo.street1,
-        street2: personalInfo.street2,
-        city: personalInfo.city,
-        state: personalInfo.state,
-        zip: personalInfo.zip,
         role: 'service-provider' as const,
         avatar: personalInfo.profilePhoto,
         businessName: `${personalInfo.firstName} ${personalInfo.lastName}'s Service`,
@@ -588,141 +550,6 @@ export default function ServiceProviderRegistrationScreen() {
               />
               {errors.phone && (
                 <Text style={[styles.errorText, { color: colors.danger }]}>{errors.phone}</Text>
-              )}
-            </View>
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Address *</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Street Address *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { 
-                    backgroundColor: colors.inputBackground,
-                    borderColor: errors.street1 ? colors.danger : colors.border,
-                    color: colors.text,
-                  }
-                ]}
-                placeholder="Enter your street address"
-                placeholderTextColor={colors.textSecondary}
-                value={personalInfo.street1}
-                onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, street1: text });
-                  if (errors.street1) {
-                    const { street1, ...rest } = errors;
-                    setErrors(rest);
-                  }
-                }}
-              />
-              {errors.street1 && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.street1}</Text>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Apartment, Suite, etc. (optional)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { 
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }
-                ]}
-                placeholder="Apartment or suite number"
-                placeholderTextColor={colors.textSecondary}
-                value={personalInfo.street2}
-                onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, street2: text });
-                }}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.flex1]}>
-                <Text style={[styles.label, { color: colors.text }]}>City *</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { 
-                      backgroundColor: colors.inputBackground,
-                      borderColor: errors.city ? colors.danger : colors.border,
-                      color: colors.text,
-                    }
-                  ]}
-                  placeholder="City"
-                  placeholderTextColor={colors.textSecondary}
-                  value={personalInfo.city}
-                  onChangeText={(text) => {
-                    setPersonalInfo({ ...personalInfo, city: text });
-                    if (errors.city) {
-                      const { city, ...rest } = errors;
-                      setErrors(rest);
-                    }
-                  }}
-                />
-                {errors.city && (
-                  <Text style={[styles.errorText, { color: colors.danger }]}>{errors.city}</Text>
-                )}
-              </View>
-
-              <View style={[styles.inputGroup, styles.flex1, styles.marginLeft]}>
-                <Text style={[styles.label, { color: colors.text }]}>State *</Text>
-                <View style={[styles.pickerContainer, { 
-                  backgroundColor: colors.inputBackground,
-                  borderColor: errors.state ? colors.danger : colors.border 
-                }]}>
-                  <Picker
-                    selectedValue={personalInfo.state}
-                    onValueChange={(value) => {
-                      setPersonalInfo({ ...personalInfo, state: value });
-                      if (errors.state) {
-                        const { state, ...rest } = errors;
-                        setErrors(rest);
-                      }
-                    }}
-                    style={[styles.picker, { color: colors.text }]}
-                  >
-                    <Picker.Item label="Select State" value="" color={colors.textSecondary} />
-                    {US_STATES.map((state) => (
-                      <Picker.Item key={state} label={state} value={state} color={colors.text} />
-                    ))}
-                  </Picker>
-                </View>
-                {errors.state && (
-                  <Text style={[styles.errorText, { color: colors.danger }]}>{errors.state}</Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>ZIP Code *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { 
-                    backgroundColor: colors.inputBackground,
-                    borderColor: errors.zip ? colors.danger : colors.border,
-                    color: colors.text,
-                  }
-                ]}
-                placeholder="12345"
-                placeholderTextColor={colors.textSecondary}
-                value={personalInfo.zip}
-                onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, zip: text });
-                  if (errors.zip) {
-                    const { zip, ...rest } = errors;
-                    setErrors(rest);
-                  }
-                }}
-                keyboardType="numeric"
-                maxLength={10}
-              />
-              {errors.zip && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.zip}</Text>
               )}
             </View>
 
@@ -1038,24 +865,6 @@ const styles = StyleSheet.create({
   uploadText: {
     fontFamily: 'Poppins-Medium',
     fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  flex1: {
-    flex: 1,
-  },
-  marginLeft: {
-    marginLeft: 0,
-  },
-  pickerContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 48,
   },
   serviceItem: {
     borderRadius: 8,
