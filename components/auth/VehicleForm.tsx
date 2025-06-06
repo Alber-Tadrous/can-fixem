@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface Manufacturer {
   id: string;
@@ -49,6 +50,8 @@ export default function VehicleForm({
   useEffect(() => {
     if (vehicle.make) {
       fetchModels(vehicle.make);
+    } else {
+      setModels([]);
     }
   }, [vehicle.make]);
 
@@ -56,13 +59,16 @@ export default function VehicleForm({
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/vehicles/makes');
-      if (!response.ok) throw new Error('Failed to fetch manufacturers');
-      const data = await response.json();
-      setManufacturers(data);
+      const { data, error: fetchError } = await supabase
+        .from('manufacturers')
+        .select('id, name')
+        .order('name');
+
+      if (fetchError) throw fetchError;
+      setManufacturers(data || []);
     } catch (err) {
-      setError('Error loading manufacturers');
-      console.error(err);
+      console.error('Error fetching manufacturers:', err);
+      setError('Failed to load manufacturers');
     } finally {
       setLoading(false);
     }
@@ -72,13 +78,17 @@ export default function VehicleForm({
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/vehicles/models?manufacturerId=${manufacturerId}`);
-      if (!response.ok) throw new Error('Failed to fetch models');
-      const data = await response.json();
-      setModels(data);
+      const { data, error: fetchError } = await supabase
+        .from('vehicle_models')
+        .select('id, name')
+        .eq('manufacturer_id', manufacturerId)
+        .order('name');
+
+      if (fetchError) throw fetchError;
+      setModels(data || []);
     } catch (err) {
-      setError('Error loading models');
-      console.error(err);
+      console.error('Error fetching models:', err);
+      setError('Failed to load models');
     } finally {
       setLoading(false);
     }
