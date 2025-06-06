@@ -34,6 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         try {
+          // Wait a bit for the database to be ready
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -45,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // If profile doesn't exist, user might need to complete registration
             if (error.code === 'PGRST116') {
               console.log('Profile not found - user may need to complete registration');
+              // Don't set user to null here, let the registration flow handle it
             }
           } else if (profile) {
             setUser(profile);
@@ -73,6 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (session?.user) {
+        // Wait a bit for the database to be ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -109,6 +116,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (session?.user) {
+        // Wait a bit for the database to be ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -117,7 +127,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (profileError) {
           console.error('Error fetching profile after login:', profileError);
-          throw new Error('Failed to load user profile');
+          if (profileError.code === 'PGRST116') {
+            throw new Error('Profile not found. Please contact support.');
+          } else {
+            throw new Error('Failed to load user profile');
+          }
         }
         
         if (profile) {
@@ -137,12 +151,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       console.log('Starting registration for:', userData.email);
       
-      // Check if email already exists
-      const { data: existingUser } = await supabase.auth.getUser();
-      if (existingUser?.user?.email === userData.email) {
-        throw new Error('An account with this email already exists');
-      }
-
       // First, sign up the user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: userData.email!,
@@ -159,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Signup error:', signUpError);
         
         // Handle specific error cases
-        if (signUpError.message.includes('already registered')) {
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')) {
           throw new Error('An account with this email already exists');
         } else if (signUpError.message.includes('password')) {
           throw new Error('Password must be at least 6 characters long');
@@ -176,6 +184,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('User signed up successfully:', authData.user.id);
 
+      // Wait for the auth user to be fully created
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Create the profile with better error handling
       const profileData = {
         id: authData.user.id,
@@ -191,9 +202,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       console.log('Creating profile with data:', profileData);
-
-      // Wait a moment for the auth user to be fully created
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -214,8 +222,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Handle specific profile creation errors
         if (profileError.code === '23505') {
           throw new Error('An account with this email already exists');
-        } else if (profileError.message.includes('permission')) {
+        } else if (profileError.message.includes('permission') || profileError.code === '42501') {
           throw new Error('Permission denied. Please try again.');
+        } else if (profileError.code === '23503') {
+          throw new Error('Invalid user data. Please try again.');
         }
         
         throw new Error(`Failed to create profile: ${profileError.message}`);
