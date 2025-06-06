@@ -2,7 +2,17 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Picker } from '@react-native-picker/picker';
-import { carMakes, getModelsForMake, getYearRange } from '@/data/carMakes';
+import { useEffect, useState } from 'react';
+
+interface Manufacturer {
+  id: string;
+  name: string;
+}
+
+interface Model {
+  id: string;
+  name: string;
+}
 
 interface VehicleFormProps {
   index: number;
@@ -26,13 +36,52 @@ export default function VehicleForm({
   errors,
 }: VehicleFormProps) {
   const { colors } = useTheme();
-  const years = getYearRange();
-  const models = getModelsForMake(vehicle.make);
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const years = Array.from({ length: 125 }, (_, i) => (new Date().getFullYear() - i).toString());
 
-  const handleMakeChange = (value: string) => {
-    onUpdate(index, 'make', value);
-    // Reset model when make changes
-    onUpdate(index, 'model', '');
+  useEffect(() => {
+    fetchManufacturers();
+  }, []);
+
+  useEffect(() => {
+    if (vehicle.make) {
+      fetchModels(vehicle.make);
+    }
+  }, [vehicle.make]);
+
+  const fetchManufacturers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/vehicles/makes');
+      if (!response.ok) throw new Error('Failed to fetch manufacturers');
+      const data = await response.json();
+      setManufacturers(data);
+    } catch (err) {
+      setError('Error loading manufacturers');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchModels = async (manufacturerId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/vehicles/models?manufacturerId=${manufacturerId}`);
+      if (!response.ok) throw new Error('Failed to fetch models');
+      const data = await response.json();
+      setModels(data);
+    } catch (err) {
+      setError('Error loading models');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,6 +98,10 @@ export default function VehicleForm({
         )}
       </View>
 
+      {error && (
+        <Text style={[styles.errorText, { color: colors.danger, marginBottom: 16 }]}>{error}</Text>
+      )}
+
       <View style={styles.form}>
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Make</Text>
@@ -58,12 +111,13 @@ export default function VehicleForm({
           }]}>
             <Picker
               selectedValue={vehicle.make}
-              onValueChange={handleMakeChange}
+              onValueChange={(value) => onUpdate(index, 'make', value)}
               style={[styles.picker, { color: colors.text }]}
+              enabled={!loading}
             >
               <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
-              {carMakes.map((make) => (
-                <Picker.Item key={make} label={make} value={make} color={colors.text} />
+              {manufacturers.map((make) => (
+                <Picker.Item key={make.id} label={make.name} value={make.id} color={colors.text} />
               ))}
             </Picker>
           </View>
@@ -83,7 +137,7 @@ export default function VehicleForm({
               selectedValue={vehicle.model}
               onValueChange={(value) => onUpdate(index, 'model', value)}
               style={[styles.picker, { color: colors.text }]}
-              enabled={!!vehicle.make}
+              enabled={!!vehicle.make && !loading}
             >
               <Picker.Item 
                 label={vehicle.make ? "Select Model" : "Select Make First"} 
@@ -91,7 +145,7 @@ export default function VehicleForm({
                 color={colors.textSecondary} 
               />
               {models.map((model) => (
-                <Picker.Item key={model} label={model} value={model} color={colors.text} />
+                <Picker.Item key={model.id} label={model.name} value={model.id} color={colors.text} />
               ))}
             </Picker>
           </View>
@@ -113,7 +167,7 @@ export default function VehicleForm({
             >
               <Picker.Item label="Select Year" value="" color={colors.textSecondary} />
               {years.map((year) => (
-                <Picker.Item key={year} label={year.toString()} value={year.toString()} color={colors.text} />
+                <Picker.Item key={year} label={year} value={year} color={colors.text} />
               ))}
             </Picker>
           </View>
