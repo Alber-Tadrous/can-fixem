@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         try {
           // Wait a bit for the database to be ready
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           const { data: profile, error } = await supabase
             .from('profiles')
@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
           if (error) {
             console.error('Error fetching profile:', error);
-            // If profile doesn't exist, user might need to complete registration
             if (error.code === 'PGRST116') {
               console.log('Profile not found - user may need to complete registration');
               // Don't set user to null here, let the registration flow handle it
@@ -78,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         // Wait a bit for the database to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -117,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session?.user) {
         // Wait a bit for the database to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -151,11 +150,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       console.log('Starting registration for:', userData.email);
       
-      // First, sign up the user
+      // Validate required fields
+      if (!userData.email || !userData.password || !userData.name || !userData.role) {
+        throw new Error('Missing required fields');
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Validate password length
+      if (userData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+      
+      // First, sign up the user with email confirmation disabled
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: userData.email!,
-        password: userData.password!,
+        email: userData.email,
+        password: userData.password,
         options: {
+          emailRedirectTo: undefined, // Disable email confirmation
           data: {
             name: userData.name,
             role: userData.role,
@@ -185,20 +201,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('User signed up successfully:', authData.user.id);
 
       // Wait for the auth user to be fully created
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Create the profile with better error handling
       const profileData = {
         id: authData.user.id,
-        name: userData.name!,
-        email: userData.email!,
+        name: userData.name,
+        email: userData.email,
         phone: userData.phone || '',
-        street1: userData.street1 || '',
-        street2: userData.street2 || '',
-        city: userData.city || '',
-        state: userData.state || '',
-        zip: userData.zip || '',
-        role: userData.role!,
+        location: userData.street1 && userData.city && userData.state 
+          ? `${userData.street1}, ${userData.city}, ${userData.state} ${userData.zip || ''}`.trim()
+          : '',
+        role: userData.role,
+        avatar_url: userData.avatar || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       console.log('Creating profile with data:', profileData);
@@ -232,6 +249,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('Profile created successfully:', profile);
+
+      // If this is a service provider, create the service provider record
+      if (userData.role === 'service-provider') {
+        console.log('Creating service provider record...');
+        
+        const serviceProviderData = {
+          user_id: authData.user.id,
+          business_name: userData.businessName || null,
+          description: userData.description || null,
+          services: userData.services || [],
+          service_radius: userData.serviceRadius || 25,
+          rating: null,
+          review_count: 0,
+          is_verified: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error: serviceProviderError } = await supabase
+          .from('service_providers')
+          .insert([serviceProviderData]);
+
+        if (serviceProviderError) {
+          console.error('Service provider creation error:', serviceProviderError);
+          // Don't fail the entire registration for this, just log it
+          console.warn('Service provider record creation failed, but user profile was created successfully');
+        } else {
+          console.log('Service provider record created successfully');
+        }
+      }
+
       setUser(profile);
       
     } catch (error: any) {

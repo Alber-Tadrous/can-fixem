@@ -64,23 +64,23 @@ export default function CarOwnerSignUpScreen() {
 
   const validatePersonalInfo = () => {
     const newErrors: { [key: string]: string } = {};
-    const nameRegex = /^[a-zA-Z]{2,50}$/;
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const passwordRegex = /^.{6,}$/; // Simplified - just minimum 6 characters
+    const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
     const zipRegex = /^\d{5}(-\d{4})?$/;
 
     if (!nameRegex.test(personalInfo.firstName)) {
-      newErrors.firstName = 'First name must be 2-50 letters only';
+      newErrors.firstName = 'First name must be 2-50 characters, letters only';
     }
     if (!nameRegex.test(personalInfo.lastName)) {
-      newErrors.lastName = 'Last name must be 2-50 letters only';
+      newErrors.lastName = 'Last name must be 2-50 characters, letters only';
     }
     if (!emailRegex.test(personalInfo.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
     if (!passwordRegex.test(personalInfo.password)) {
-      newErrors.password = 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character';
+      newErrors.password = 'Password must be at least 6 characters long';
     }
     if (personalInfo.password !== personalInfo.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -201,6 +201,8 @@ export default function CarOwnerSignUpScreen() {
     try {
       setErrors({}); // Clear previous errors
       
+      console.log('Attempting car owner registration...');
+      
       // First, register the user
       await register({
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
@@ -228,8 +230,23 @@ export default function CarOwnerSignUpScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Registration error:', error);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
+      } else if (error.message.includes('password')) {
+        errorMessage = 'Password must be at least 6 characters long.';
+      } else if (error.message.includes('email')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.message.includes('permission')) {
+        errorMessage = 'Permission denied. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setErrors({
-        submit: error.message || 'Registration failed. Please try again.',
+        submit: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
@@ -527,7 +544,7 @@ export default function CarOwnerSignUpScreen() {
                     color: colors.text,
                   }
                 ]}
-                placeholder="Create a password"
+                placeholder="Create a password (minimum 6 characters)"
                 placeholderTextColor={colors.textSecondary}
                 value={personalInfo.password}
                 onChangeText={(text) => {
@@ -621,9 +638,11 @@ export default function CarOwnerSignUpScreen() {
             </TouchableOpacity>
 
             {errors.submit && (
-              <Text style={[styles.errorText, { color: colors.danger, textAlign: 'center', marginTop: 16 }]}>
-                {errors.submit}
-              </Text>
+              <View style={[styles.submitErrorContainer, { backgroundColor: colors.danger + '10', borderColor: colors.danger }]}>
+                <Text style={[styles.submitErrorText, { color: colors.danger }]}>
+                  {errors.submit}
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -710,5 +729,17 @@ const styles = StyleSheet.create({
   },
   marginLeft: {
     marginLeft: 8,
+  },
+  submitErrorContainer: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  submitErrorText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

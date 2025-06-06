@@ -276,17 +276,21 @@ export default function ServiceProviderRegistrationScreen() {
     try {
       setErrors({});
       
-      // Create a unique email to avoid conflicts during testing
-      const timestamp = Date.now();
-      const testEmail = personalInfo.email.includes('@test.') 
-        ? `${personalInfo.firstName.toLowerCase()}.${personalInfo.lastName.toLowerCase()}.${timestamp}@test.com`
-        : personalInfo.email;
+      console.log('Attempting service provider registration...');
       
-      console.log('Attempting registration with email:', testEmail);
-      
+      // Collect offered services
+      const offeredServices = Object.entries(services)
+        .filter(([_, service]) => service.offered)
+        .map(([key, service]) => ({
+          name: key,
+          price: parseFloat(service.price),
+          duration: parseInt(service.estimatedTime),
+          description: key === 'customService' ? service.description : undefined,
+        }));
+
       await register({
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-        email: testEmail,
+        email: personalInfo.email,
         password: personalInfo.password,
         phone: personalInfo.phone,
         street1: personalInfo.street1,
@@ -295,6 +299,11 @@ export default function ServiceProviderRegistrationScreen() {
         state: personalInfo.state,
         zip: personalInfo.zip,
         role: 'service-provider',
+        avatar: personalInfo.profilePhoto,
+        businessName: `${personalInfo.firstName} ${personalInfo.lastName}'s Service`,
+        description: `Professional automotive service provider offering ${offeredServices.length} services`,
+        services: offeredServices.map(s => s.name),
+        serviceRadius: 25, // Default 25 mile radius
       });
 
       console.log('Registration successful, navigating to main app');

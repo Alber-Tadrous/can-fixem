@@ -4,13 +4,19 @@ export interface User {
   email: string;
   password?: string;
   avatar?: string;
+  avatar_url?: string;
   role: 'car-owner' | 'service-provider';
   phone: string;
-  street1: string;
+  location?: string;
+  street1?: string;
   street2?: string;
-  city: string;
-  state: string;
-  zip: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  businessName?: string;
+  description?: string;
+  services?: string[];
+  serviceRadius?: number;
   created_at?: string;
   updated_at?: string;
 }
