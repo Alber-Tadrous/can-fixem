@@ -41,7 +41,7 @@ export default function VehicleForm({
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const years = Array.from({ length: 125 }, (_, i) => (new Date().getFullYear() - i).toString());
+  const years = Array.from({ length: 125 }, (_, i) => (new Date().getFullYear() + 1 - i).toString());
 
   useEffect(() => {
     fetchManufacturers();
@@ -52,6 +52,10 @@ export default function VehicleForm({
       fetchModels(vehicle.make);
     } else {
       setModels([]);
+      // Clear model selection when make changes
+      if (vehicle.model) {
+        onUpdate(index, 'model', '');
+      }
     }
   }, [vehicle.make]);
 
@@ -59,16 +63,21 @@ export default function VehicleForm({
     try {
       setLoading(true);
       setError(null);
+      
       const { data, error: fetchError } = await supabase
         .from('manufacturers')
         .select('id, name')
         .order('name');
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Supabase error:', fetchError);
+        throw fetchError;
+      }
+      
       setManufacturers(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching manufacturers:', err);
-      setError('Failed to load manufacturers');
+      setError('Failed to load manufacturers. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -78,19 +87,32 @@ export default function VehicleForm({
     try {
       setLoading(true);
       setError(null);
+      
       const { data, error: fetchError } = await supabase
         .from('vehicle_models')
         .select('id, name')
         .eq('manufacturer_id', manufacturerId)
         .order('name');
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Supabase error:', fetchError);
+        throw fetchError;
+      }
+      
       setModels(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching models:', err);
-      setError('Failed to load models');
+      setError('Failed to load models. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (!vehicle.make) {
+      fetchManufacturers();
+    } else {
+      fetchModels(vehicle.make);
     }
   };
 
@@ -109,7 +131,15 @@ export default function VehicleForm({
       </View>
 
       {error && (
-        <Text style={[styles.errorText, { color: colors.danger, marginBottom: 16 }]}>{error}</Text>
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+          <TouchableOpacity 
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={handleRetry}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.form}>
@@ -117,15 +147,20 @@ export default function VehicleForm({
           <Text style={[styles.label, { color: colors.text }]}>Make</Text>
           <View style={[styles.pickerContainer, { 
             backgroundColor: colors.inputBackground, 
-            borderColor: errors?.[`${index}-make`] ? colors.danger : colors.border 
+            borderColor: errors?.[`${index}-make`] ? colors.danger : colors.border,
+            opacity: loading ? 0.5 : 1
           }]}>
             <Picker
               selectedValue={vehicle.make}
               onValueChange={(value) => onUpdate(index, 'make', value)}
               style={[styles.picker, { color: colors.text }]}
-              enabled={!loading}
+              enabled={!loading && manufacturers.length > 0}
             >
-              <Picker.Item label="Select Make" value="" color={colors.textSecondary} />
+              <Picker.Item 
+                label={loading ? "Loading..." : "Select Make"} 
+                value="" 
+                color={colors.textSecondary} 
+              />
               {manufacturers.map((make) => (
                 <Picker.Item key={make.id} label={make.name} value={make.id} color={colors.text} />
               ))}
@@ -141,16 +176,21 @@ export default function VehicleForm({
           <View style={[styles.pickerContainer, { 
             backgroundColor: colors.inputBackground,
             borderColor: errors?.[`${index}-model`] ? colors.danger : colors.border,
-            opacity: !vehicle.make ? 0.5 : 1
+            opacity: (!vehicle.make || loading) ? 0.5 : 1
           }]}>
             <Picker
               selectedValue={vehicle.model}
               onValueChange={(value) => onUpdate(index, 'model', value)}
               style={[styles.picker, { color: colors.text }]}
-              enabled={!!vehicle.make && !loading}
+              enabled={!!vehicle.make && !loading && models.length > 0}
             >
               <Picker.Item 
-                label={vehicle.make ? "Select Model" : "Select Make First"} 
+                label={
+                  loading ? "Loading..." :
+                  !vehicle.make ? "Select Make First" : 
+                  models.length === 0 ? "No models available" :
+                  "Select Model"
+                } 
                 value="" 
                 color={colors.textSecondary} 
               />
@@ -211,6 +251,25 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
+  errorContainer: {
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontFamily: 'Poppins-Medium',
+    fontSize: 12,
+  },
   form: {
     gap: 16,
   },
@@ -232,5 +291,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 12,
+    flex: 1,
   },
 });
