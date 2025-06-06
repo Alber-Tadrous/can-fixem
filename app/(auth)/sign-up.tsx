@@ -16,7 +16,7 @@ export default function SignUpScreen() {
     if (role === 'car-owner') {
       router.push('/car-owner-signup');
     } else if (role === 'service-provider') {
-      router.push('/service-provider-signup');
+      router.push('/service-provider-registration');
     }
   };
 
