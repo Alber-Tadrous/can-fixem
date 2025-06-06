@@ -162,23 +162,23 @@ export default function ServiceProviderRegistrationScreen() {
 
   const validatePersonalInfo = () => {
     const newErrors: { [key: string]: string } = {};
-    const nameRegex = /^[a-zA-Z]{2,50}$/;
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+    const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
     const zipRegex = /^\d{5}(-\d{4})?$/;
 
     if (!nameRegex.test(personalInfo.firstName)) {
-      newErrors.firstName = 'First name must be 2-50 letters only';
+      newErrors.firstName = 'First name must be 2-50 characters, letters only';
     }
     if (!nameRegex.test(personalInfo.lastName)) {
-      newErrors.lastName = 'Last name must be 2-50 letters only';
+      newErrors.lastName = 'Last name must be 2-50 characters, letters only';
     }
     if (!emailRegex.test(personalInfo.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
     if (!passwordRegex.test(personalInfo.password)) {
-      newErrors.password = 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character';
+      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
     }
     if (personalInfo.password !== personalInfo.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -186,23 +186,17 @@ export default function ServiceProviderRegistrationScreen() {
     if (!phoneRegex.test(personalInfo.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
-    if (!personalInfo.profilePhoto) {
-      newErrors.profilePhoto = 'Profile photo is required';
+    if (!personalInfo.street1.trim() || personalInfo.street1.length < 5) {
+      newErrors.street1 = 'Street address must be at least 5 characters';
     }
-    if (!personalInfo.street1.trim() || personalInfo.street1.length < 5 || personalInfo.street1.length > 100) {
-      newErrors.street1 = 'Street address must be 5-100 characters';
-    }
-    if (personalInfo.street2 && (personalInfo.street2.length < 5 || personalInfo.street2.length > 100)) {
-      newErrors.street2 = 'Street address line 2 must be 5-100 characters if provided';
-    }
-    if (!personalInfo.city.trim() || personalInfo.city.length < 2 || personalInfo.city.length > 50) {
-      newErrors.city = 'City must be 2-50 characters';
+    if (!personalInfo.city.trim() || personalInfo.city.length < 2) {
+      newErrors.city = 'City must be at least 2 characters';
     }
     if (!personalInfo.state) {
       newErrors.state = 'State is required';
     }
     if (!zipRegex.test(personalInfo.zip)) {
-      newErrors.zip = 'Please enter a valid 5-digit ZIP code';
+      newErrors.zip = 'Please enter a valid ZIP code';
     }
 
     setErrors(newErrors);
@@ -227,8 +221,8 @@ export default function ServiceProviderRegistrationScreen() {
           newErrors[`${key}_time`] = 'Valid estimated time is required';
         }
         
-        if (key === 'customService' && (!service.description || service.description.length < 10 || service.description.length > 200)) {
-          newErrors[`${key}_description`] = 'Custom service description must be 10-200 characters';
+        if (key === 'customService' && (!service.description || service.description.length < 10)) {
+          newErrors[`${key}_description`] = 'Custom service description must be at least 10 characters';
         }
       }
     });
@@ -258,34 +252,38 @@ export default function ServiceProviderRegistrationScreen() {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to upload your profile photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      
-      // Check file size (5MB limit)
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('File too large', 'Please select an image smaller than 5MB.');
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to upload your profile photo.');
         return;
       }
-      
-      setPersonalInfo({ ...personalInfo, profilePhoto: asset.uri });
-      if (errors.profilePhoto) {
-        const { profilePhoto, ...rest } = errors;
-        setErrors(rest);
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5, // Reduced quality for faster upload
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Check file size (2MB limit for faster processing)
+        if (asset.fileSize && asset.fileSize > 2 * 1024 * 1024) {
+          Alert.alert('File too large', 'Please select an image smaller than 2MB.');
+          return;
+        }
+        
+        setPersonalInfo({ ...personalInfo, profilePhoto: asset.uri });
+        if (errors.profilePhoto) {
+          const { profilePhoto, ...rest } = errors;
+          setErrors(rest);
+        }
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 
@@ -320,6 +318,7 @@ export default function ServiceProviderRegistrationScreen() {
     try {
       setErrors({});
       
+      // Simplified registration - just create the basic profile first
       await register({
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
         email: personalInfo.email,
@@ -333,9 +332,9 @@ export default function ServiceProviderRegistrationScreen() {
         role: 'service-provider',
       });
 
-      // TODO: Save service offerings and spare parts info to database
-      // This would typically involve creating service_provider record and service offerings
-
+      // TODO: In a real app, you would save the service offerings and spare parts info
+      // to the database after the user is created. For now, we'll just navigate to the main app.
+      
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -423,7 +422,7 @@ export default function ServiceProviderRegistrationScreen() {
                     color: colors.text,
                   }
                 ]}
-                placeholder="Describe your custom service (10-200 characters)"
+                placeholder="Describe your custom service"
                 placeholderTextColor={colors.textSecondary}
                 value={service.description || ''}
                 onChangeText={(value) => updateService(serviceKey, 'description', value)}
@@ -518,13 +517,13 @@ export default function ServiceProviderRegistrationScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Profile Photo * (Max 5MB, JPG/PNG)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Profile Photo (Optional)</Text>
               <TouchableOpacity
                 style={[
                   styles.photoUpload,
                   { 
                     backgroundColor: colors.inputBackground,
-                    borderColor: errors.profilePhoto ? colors.danger : colors.border,
+                    borderColor: colors.border,
                   }
                 ]}
                 onPress={pickImage}
@@ -540,9 +539,6 @@ export default function ServiceProviderRegistrationScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-              {errors.profilePhoto && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.profilePhoto}</Text>
-              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -602,10 +598,10 @@ export default function ServiceProviderRegistrationScreen() {
               )}
             </View>
 
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Complete Address *</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Address *</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Street Address Line 1 * (5-100 characters)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Street Address *</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -625,7 +621,6 @@ export default function ServiceProviderRegistrationScreen() {
                     setErrors(rest);
                   }
                 }}
-                maxLength={100}
               />
               {errors.street1 && (
                 <Text style={[styles.errorText, { color: colors.danger }]}>{errors.street1}</Text>
@@ -633,36 +628,28 @@ export default function ServiceProviderRegistrationScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Street Address Line 2 (5-100 characters)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Apartment, Suite, etc. (optional)</Text>
               <TextInput
                 style={[
                   styles.input,
                   { 
                     backgroundColor: colors.inputBackground,
-                    borderColor: errors.street2 ? colors.danger : colors.border,
+                    borderColor: colors.border,
                     color: colors.text,
                   }
                 ]}
-                placeholder="Apartment, suite, etc. (optional)"
+                placeholder="Apartment or suite number"
                 placeholderTextColor={colors.textSecondary}
                 value={personalInfo.street2}
                 onChangeText={(text) => {
                   setPersonalInfo({ ...personalInfo, street2: text });
-                  if (errors.street2) {
-                    const { street2, ...rest } = errors;
-                    setErrors(rest);
-                  }
                 }}
-                maxLength={100}
               />
-              {errors.street2 && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.street2}</Text>
-              )}
             </View>
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, styles.flex1]}>
-                <Text style={[styles.label, { color: colors.text }]}>City * (2-50 characters)</Text>
+                <Text style={[styles.label, { color: colors.text }]}>City *</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -682,7 +669,6 @@ export default function ServiceProviderRegistrationScreen() {
                       setErrors(rest);
                     }
                   }}
-                  maxLength={50}
                 />
                 {errors.city && (
                   <Text style={[styles.errorText, { color: colors.danger }]}>{errors.city}</Text>
@@ -719,7 +705,7 @@ export default function ServiceProviderRegistrationScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>ZIP Code * (5-digit format)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>ZIP Code *</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -823,40 +809,19 @@ export default function ServiceProviderRegistrationScreen() {
               </Text>
             )}
 
-            <Text style={[styles.categoryTitle, { color: colors.text }]}>1. Basic Maintenance & Checks</Text>
-            {renderServiceItem('engineOilCheck', 'Engine Oil Level Check', services.engineOilCheck)}
-            {renderServiceItem('coolantCheck', 'Coolant Level Check', services.coolantCheck)}
-            {renderServiceItem('windshieldFluidCheck', 'Windshield Washer Fluid Check', services.windshieldFluidCheck)}
-            {renderServiceItem('brakeFluidCheck', 'Brake Fluid Check', services.brakeFluidCheck)}
-            {renderServiceItem('powerSteeringCheck', 'Power Steering Fluid Check', services.powerSteeringCheck)}
-            {renderServiceItem('tirePressureCheck', 'Tire Pressure Check', services.tirePressureCheck)}
-            {renderServiceItem('tireTreadCheck', 'Tire Tread Depth Measurement', services.tireTreadCheck)}
-            {renderServiceItem('beltInspection', 'Belt Inspection (Serpentine/Timing/V-Belt)', services.beltInspection)}
-            {renderServiceItem('hoseInspection', 'Hose Inspection (All Systems)', services.hoseInspection)}
-
-            <Text style={[styles.categoryTitle, { color: colors.text }]}>2. Component Replacements</Text>
-            {renderServiceItem('wiperBladeReplacement', 'Windshield Wiper Blade Replacement', services.wiperBladeReplacement)}
-            {renderServiceItem('cabinAirFilter', 'Cabin Air Filter Replacement', services.cabinAirFilter)}
-            {renderServiceItem('engineAirFilter', 'Engine Air Filter Replacement', services.engineAirFilter)}
-            {renderServiceItem('lightBulbReplacement', 'Light Bulb Replacement', services.lightBulbReplacement)}
-            {renderServiceItem('fuseReplacement', 'Fuse Replacement', services.fuseReplacement)}
+            <Text style={[styles.categoryTitle, { color: colors.text }]}>Popular Services</Text>
             {renderServiceItem('oilChangeService', 'Oil Change Service', services.oilChangeService)}
             {renderServiceItem('tireRotation', 'Tire Rotation', services.tireRotation)}
-            {renderServiceItem('sparkPlugReplacement', 'Spark Plug Replacement', services.sparkPlugReplacement)}
-
-            <Text style={[styles.categoryTitle, { color: colors.text }]}>3. Cleaning Services</Text>
+            {renderServiceItem('batteryReplacement', 'Battery Replacement', services.batteryReplacement)}
             {renderServiceItem('interiorDetailing', 'Interior Detailing', services.interiorDetailing)}
             {renderServiceItem('exteriorWash', 'Exterior Wash', services.exteriorWash)}
-            {renderServiceItem('exteriorWaxing', 'Exterior Waxing', services.exteriorWaxing)}
 
-            <Text style={[styles.categoryTitle, { color: colors.text }]}>4. Battery Services</Text>
-            {renderServiceItem('batteryTerminalCleaning', 'Battery Terminal Cleaning', services.batteryTerminalCleaning)}
-            {renderServiceItem('jumpStartService', 'Jump-Start Service', services.jumpStartService)}
-            {renderServiceItem('batteryReplacement', 'Battery Replacement', services.batteryReplacement)}
-            {renderServiceItem('cabinAirFilterBattery', 'Cabin Air Filter Replacement', services.cabinAirFilterBattery)}
+            <Text style={[styles.categoryTitle, { color: colors.text }]}>Maintenance & Checks</Text>
+            {renderServiceItem('engineOilCheck', 'Engine Oil Level Check', services.engineOilCheck)}
+            {renderServiceItem('tirePressureCheck', 'Tire Pressure Check', services.tirePressureCheck)}
+            {renderServiceItem('beltInspection', 'Belt Inspection', services.beltInspection)}
 
-            <Text style={[styles.categoryTitle, { color: colors.text }]}>5. Additional Services</Text>
-            {renderServiceItem('sideMirrorReplacement', 'Side Mirror Replacement', services.sideMirrorReplacement)}
+            <Text style={[styles.categoryTitle, { color: colors.text }]}>Custom Service</Text>
             {renderServiceItem('customService', 'Custom Service', services.customService)}
 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Spare Parts Options</Text>
