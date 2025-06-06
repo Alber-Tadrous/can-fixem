@@ -1,21 +1,26 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { MapPin, Search } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useServices } from '@/hooks/useServices';
 import HomeHeader from '@/components/home/HomeHeader';
 import ServiceCard from '@/components/home/ServiceCard';
 import ProviderCard from '@/components/home/ProviderCard';
 import SearchInput from '@/components/ui/SearchInput';
-import { mockServices, mockProviders } from '@/data/mockData';
+import { mockProviders } from '@/data/mockData';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { services, loading: servicesLoading } = useServices();
   const [location, setLocation] = useState('San Francisco, CA');
   const [nearbyProviders, setNearbyProviders] = useState(mockProviders);
+
+  // Get featured services (first 5 services)
+  const featuredServices = services.slice(0, 5);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -43,19 +48,34 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalList}
-          >
-            {mockServices.map((service) => (
-              <ServiceCard 
-                key={service.id}
-                service={service}
-                onPress={() => router.push(`/service/${service.id}`)}
-              />
-            ))}
-          </ScrollView>
+          {servicesLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Loading services...
+              </Text>
+            </View>
+          ) : featuredServices.length > 0 ? (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {featuredServices.map((service) => (
+                <ServiceCard 
+                  key={service.id}
+                  service={service}
+                  onPress={() => router.push(`/service/${service.id}`)}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyServicesContainer}>
+              <Text style={[styles.emptyServicesText, { color: colors.textSecondary }]}>
+                No services available at the moment
+              </Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.section}>
@@ -123,6 +143,25 @@ const styles = StyleSheet.create({
   },
   seeAll: {
     fontFamily: 'Poppins-Medium',
+    fontSize: 14,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  loadingText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
+  },
+  emptyServicesContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyServicesText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
   },
   horizontalList: {

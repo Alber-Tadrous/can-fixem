@@ -1,12 +1,11 @@
 import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { ServiceCategory } from '@/data/mockData';
 
 interface CategoryButtonProps {
   category: {
     id: string;
     name: string;
-    icon: keyof typeof ServiceCategory;
+    icon: string;
   };
   isSelected: boolean;
   onPress: () => void;
@@ -48,6 +47,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
+    minWidth: 80,
+    alignItems: 'center',
   },
   text: {
     fontFamily: 'Poppins-Medium',
