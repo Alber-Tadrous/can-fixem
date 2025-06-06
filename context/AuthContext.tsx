@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@/types';
 
 interface AuthContextProps {
@@ -30,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     checkUser();
     
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         const { data: profile } = await supabase
@@ -105,6 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { session }, error } = await supabase.auth.signUp({
         email: userData.email!,
         password: userData.password!,
+        options: {
+          data: {
+            name: userData.name,
+            role: userData.role,
+          },
+        },
       });
 
       if (error) throw error;
