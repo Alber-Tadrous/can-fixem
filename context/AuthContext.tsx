@@ -29,23 +29,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     checkUser();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile) {
+          setUser(profile);
+        }
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function checkUser() {
     try {
-      const session = await AsyncStorage.getItem('session');
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: { user } } = await supabase.auth.getUser(session);
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          
-          if (profile) {
-            setUser(profile);
-          }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          setUser(profile);
         }
       }
     } catch (error) {
@@ -65,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (session) {
-        await AsyncStorage.setItem('session', session.access_token);
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -92,8 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (session) {
-        await AsyncStorage.setItem('session', session.access_token);
-        
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
@@ -102,7 +118,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               name: userData.name,
               email: userData.email,
               phone: userData.phone,
-              location: userData.location,
+              street1: userData.street1,
+              street2: userData.street2,
+              city: userData.city,
+              state: userData.state,
+              zip: userData.zip,
               role: userData.role,
             }
           ]);
@@ -128,7 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      await AsyncStorage.removeItem('session');
       setUser(null);
     } catch (error) {
       console.error('Error logging out:', error);
