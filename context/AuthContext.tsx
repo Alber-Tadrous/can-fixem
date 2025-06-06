@@ -111,7 +111,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
-      if (error) throw error;
+      if (error) {
+      console.error('Signup error:', error);
+      throw new Error(error.message);
+    }
 
       if (session) {
         const { error: profileError } = await supabase

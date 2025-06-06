@@ -132,29 +132,32 @@ export default function CarOwnerSignUpScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateVehicles()) return;
+  // In car-owner-signup.tsx
+const handleSubmit = async () => {
+  if (!validateVehicles()) return;
 
-    try {
-      await register({
-        name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-        email: personalInfo.email,
-        password: personalInfo.password,
-        phone: personalInfo.phone,
-        street1: personalInfo.street1,
-        street2: personalInfo.street2,
-        city: personalInfo.city,
-        state: personalInfo.state,
-        zip: personalInfo.zip,
-        role: 'car-owner',
-      });
-      router.replace('/(tabs)');
-    } catch (error) {
-      setErrors({
-        submit: 'Registration failed. Please try again.',
-      });
-    }
-  };
+  try {
+    setErrors({}); // Clear previous errors
+    await register({
+      name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+      email: personalInfo.email,
+      password: personalInfo.password,
+      phone: personalInfo.phone,
+      street1: personalInfo.street1,
+      street2: personalInfo.street2,
+      city: personalInfo.city,
+      state: personalInfo.state,
+      zip: personalInfo.zip,
+      role: 'car-owner',
+    });
+    router.replace('/(tabs)');
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    setErrors({
+      submit: error.message || 'Registration failed. Please try again.',
+    });
+  }
+};
 
   const addVehicle = () => {
     setVehicles([...vehicles, { ...initialVehicle }]);
