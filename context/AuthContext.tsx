@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: Partial<User>) => {
     try {
       setIsLoading(true);
-      console.log('Starting registration for:', userData.email);
+      console.log('Starting registration for:', userData.email, 'Role:', userData.role);
       
       // Validate required fields
       if (!userData.email || !userData.password || !userData.name || !userData.role) {
@@ -203,15 +203,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Wait for the auth user to be fully created
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Build location string from address components
+      let location = '';
+      if (userData.street1) {
+        location = userData.street1;
+        if (userData.city) location += `, ${userData.city}`;
+        if (userData.state) location += `, ${userData.state}`;
+        if (userData.zip) location += ` ${userData.zip}`;
+      }
+
       // Create the profile with better error handling
       const profileData = {
         id: authData.user.id,
         name: userData.name,
         email: userData.email,
         phone: userData.phone || '',
-        location: userData.street1 && userData.city && userData.state 
-          ? `${userData.street1}, ${userData.city}, ${userData.state} ${userData.zip || ''}`.trim()
-          : '',
+        location: location.trim(),
         role: userData.role,
         avatar_url: userData.avatar || null,
         created_at: new Date().toISOString(),
@@ -256,8 +263,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const serviceProviderData = {
           user_id: authData.user.id,
-          business_name: userData.businessName || null,
-          description: userData.description || null,
+          business_name: userData.businessName || `${userData.name}'s Service`,
+          description: userData.description || `Professional automotive service provider`,
           services: userData.services || [],
           service_radius: userData.serviceRadius || 25,
           rating: null,
@@ -267,16 +274,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: new Date().toISOString(),
         };
 
-        const { error: serviceProviderError } = await supabase
+        console.log('Creating service provider with data:', serviceProviderData);
+
+        const { data: serviceProvider, error: serviceProviderError } = await supabase
           .from('service_providers')
-          .insert([serviceProviderData]);
+          .insert([serviceProviderData])
+          .select()
+          .single();
 
         if (serviceProviderError) {
           console.error('Service provider creation error:', serviceProviderError);
           // Don't fail the entire registration for this, just log it
           console.warn('Service provider record creation failed, but user profile was created successfully');
         } else {
-          console.log('Service provider record created successfully');
+          console.log('Service provider record created successfully:', serviceProvider);
         }
       }
 

@@ -288,7 +288,8 @@ export default function ServiceProviderRegistrationScreen() {
           description: key === 'customService' ? service.description : undefined,
         }));
 
-      await register({
+      // Build the registration data
+      const registrationData = {
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
         email: personalInfo.email,
         password: personalInfo.password,
@@ -298,13 +299,17 @@ export default function ServiceProviderRegistrationScreen() {
         city: personalInfo.city,
         state: personalInfo.state,
         zip: personalInfo.zip,
-        role: 'service-provider',
+        role: 'service-provider' as const,
         avatar: personalInfo.profilePhoto,
         businessName: `${personalInfo.firstName} ${personalInfo.lastName}'s Service`,
         description: `Professional automotive service provider offering ${offeredServices.length} services`,
         services: offeredServices.map(s => s.name),
         serviceRadius: 25, // Default 25 mile radius
-      });
+      };
+
+      console.log('Registration data:', registrationData);
+
+      await register(registrationData);
 
       console.log('Registration successful, navigating to main app');
       router.replace('/(tabs)');
