@@ -203,26 +203,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Wait for the auth user to be fully created
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Build location string from address components (if provided)
-      let location = '';
-      if (userData.city && userData.state) {
-        location = `${userData.city}, ${userData.state}`;
-        if (userData.zip) location += ` ${userData.zip}`;
-      } else if (userData.city) {
-        location = userData.city;
-      } else if (userData.state) {
-        location = userData.state;
-      } else {
-        location = 'United States'; // Default location
-      }
-
-      // Create the profile with better error handling
+      // Create the profile with the existing schema (no location field)
       const profileData = {
         id: authData.user.id,
         name: userData.name,
         email: userData.email,
         phone: userData.phone || '',
-        location: location.trim(),
         role: userData.role,
         avatar_url: userData.avatar || null,
         created_at: new Date().toISOString(),
