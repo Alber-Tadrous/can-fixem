@@ -203,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Wait for the auth user to be fully created
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Create the profile with the existing schema (no location field)
+      // Create the profile with optional address fields
       const profileData = {
         id: authData.user.id,
         name: userData.name,
@@ -211,6 +211,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone: userData.phone || '',
         role: userData.role,
         avatar_url: userData.avatar || null,
+        street1: userData.street1 || null,
+        street2: userData.street2 || null,
+        city: userData.city || null,
+        state: userData.state || null,
+        zip: userData.zip || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

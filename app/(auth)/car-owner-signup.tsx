@@ -203,7 +203,7 @@ export default function CarOwnerSignUpScreen() {
       
       console.log('Attempting car owner registration...');
       
-      // First, register the user
+      // First, register the user with all address information
       await register({
         name: `${personalInfo.firstName} ${personalInfo.lastName}`,
         email: personalInfo.email,
