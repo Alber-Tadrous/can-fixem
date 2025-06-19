@@ -7,13 +7,12 @@ import { ArrowLeft, Upload, Check } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 
-interface PersonalInfo {
+interface ServiceProviderInfo {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
   confirmPassword: string;
-  phone: string;
   profilePhoto: string | null;
   businessName: string;
   businessDescription: string;
@@ -35,13 +34,12 @@ const US_STATES = [
   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
 ];
 
-const initialPersonalInfo: PersonalInfo = {
+const initialInfo: ServiceProviderInfo = {
   firstName: '',
   lastName: '',
   email: '',
   password: '',
   confirmPassword: '',
-  phone: '',
   profilePhoto: null,
   businessName: '',
   businessDescription: '',
@@ -57,8 +55,7 @@ export default function ServiceProviderRegistrationScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { register } = useAuth();
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(initialPersonalInfo);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [info, setInfo] = useState<ServiceProviderInfo>(initialInfo);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,50 +64,43 @@ export default function ServiceProviderRegistrationScreen() {
     const nameRegex = /^[a-zA-Z\s]{2,50}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^.{6,}$/;
-    const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
     const zipRegex = /^\d{5}(-\d{4})?$/;
 
-    if (!nameRegex.test(personalInfo.firstName)) {
+    if (!nameRegex.test(info.firstName)) {
       newErrors.firstName = 'First name must be 2-50 characters, letters only';
     }
-    if (!nameRegex.test(personalInfo.lastName)) {
+    if (!nameRegex.test(info.lastName)) {
       newErrors.lastName = 'Last name must be 2-50 characters, letters only';
     }
-    if (!emailRegex.test(personalInfo.email)) {
+    if (!emailRegex.test(info.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    if (!passwordRegex.test(personalInfo.password)) {
+    if (!passwordRegex.test(info.password)) {
       newErrors.password = 'Password must be at least 6 characters long';
     }
-    if (personalInfo.password !== personalInfo.confirmPassword) {
+    if (info.password !== info.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    if (!phoneRegex.test(personalInfo.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
-    if (!personalInfo.businessName.trim()) {
+    if (!info.businessName.trim()) {
       newErrors.businessName = 'Business name is required';
     }
-    if (!personalInfo.businessDescription.trim()) {
+    if (!info.businessDescription.trim()) {
       newErrors.businessDescription = 'Business description is required';
     }
-    if (!personalInfo.street1.trim()) {
+    if (!info.street1.trim()) {
       newErrors.street1 = 'Street address is required';
     }
-    if (!personalInfo.city.trim()) {
+    if (!info.city.trim()) {
       newErrors.city = 'City is required';
     }
-    if (!personalInfo.state.trim()) {
+    if (!info.state.trim()) {
       newErrors.state = 'State is required';
     }
-    if (!zipRegex.test(personalInfo.zip)) {
+    if (!zipRegex.test(info.zip)) {
       newErrors.zip = 'Please enter a valid ZIP code';
     }
-    if (!personalInfo.serviceRadius || parseInt(personalInfo.serviceRadius) < 1 || parseInt(personalInfo.serviceRadius) > 100) {
+    if (!info.serviceRadius || parseInt(info.serviceRadius) < 1 || parseInt(info.serviceRadius) > 100) {
       newErrors.serviceRadius = 'Service radius must be between 1 and 100 miles';
-    }
-    if (!acceptedTerms) {
-      newErrors.terms = 'You must accept the terms of service';
     }
 
     setErrors(newErrors);
@@ -140,7 +130,7 @@ export default function ServiceProviderRegistrationScreen() {
           return;
         }
         
-        setPersonalInfo({ ...personalInfo, profilePhoto: asset.uri });
+        setInfo({ ...info, profilePhoto: asset.uri });
         if (errors.profilePhoto) {
           const { profilePhoto, ...rest } = errors;
           setErrors(rest);
@@ -162,21 +152,20 @@ export default function ServiceProviderRegistrationScreen() {
       console.log('Attempting service provider registration...');
       
       const registrationData = {
-        name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-        email: personalInfo.email,
-        password: personalInfo.password,
-        phone: personalInfo.phone,
+        name: `${info.firstName} ${info.lastName}`,
+        email: info.email,
+        password: info.password,
         role: 'service-provider' as const,
-        avatar: personalInfo.profilePhoto,
-        businessName: personalInfo.businessName,
-        description: personalInfo.businessDescription,
+        avatar: info.profilePhoto,
+        businessName: info.businessName,
+        description: info.businessDescription,
         services: [], // Empty array - services will be managed from profile
-        serviceRadius: parseInt(personalInfo.serviceRadius),
-        street1: personalInfo.street1,
-        street2: personalInfo.street2,
-        city: personalInfo.city,
-        state: personalInfo.state,
-        zip: personalInfo.zip,
+        serviceRadius: parseInt(info.serviceRadius),
+        street1: info.street1,
+        street2: info.street2,
+        city: info.city,
+        state: info.state,
+        zip: info.zip,
       };
 
       console.log('Registration data:', registrationData);
@@ -232,6 +221,31 @@ export default function ServiceProviderRegistrationScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
           
           <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Profile Photo (Optional)</Text>
+            <TouchableOpacity
+              style={[
+                styles.photoUpload,
+                { 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={pickImage}
+            >
+              {info.profilePhoto ? (
+                <Image source={{ uri: info.profilePhoto }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.uploadPlaceholder}>
+                  <Upload size={32} color={colors.textSecondary} />
+                  <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
+                    Tap to upload photo
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Full Name *</Text>
             <View style={styles.nameRow}>
               <TextInput
@@ -246,9 +260,9 @@ export default function ServiceProviderRegistrationScreen() {
                 ]}
                 placeholder="First Name"
                 placeholderTextColor={colors.textSecondary}
-                value={personalInfo.firstName}
+                value={info.firstName}
                 onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, firstName: text });
+                  setInfo({ ...info, firstName: text });
                   if (errors.firstName) {
                     const { firstName, ...rest } = errors;
                     setErrors(rest);
@@ -267,9 +281,9 @@ export default function ServiceProviderRegistrationScreen() {
                 ]}
                 placeholder="Last Name"
                 placeholderTextColor={colors.textSecondary}
-                value={personalInfo.lastName}
+                value={info.lastName}
                 onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, lastName: text });
+                  setInfo({ ...info, lastName: text });
                   if (errors.lastName) {
                     const { lastName, ...rest } = errors;
                     setErrors(rest);
@@ -285,31 +299,6 @@ export default function ServiceProviderRegistrationScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Profile Photo (Optional)</Text>
-            <TouchableOpacity
-              style={[
-                styles.photoUpload,
-                { 
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.border,
-                }
-              ]}
-              onPress={pickImage}
-            >
-              {personalInfo.profilePhoto ? (
-                <Image source={{ uri: personalInfo.profilePhoto }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.uploadPlaceholder}>
-                  <Upload size={32} color={colors.textSecondary} />
-                  <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
-                    Tap to upload photo
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Email Address *</Text>
             <TextInput
               style={[
@@ -322,9 +311,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Enter your email address"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.email}
+              value={info.email}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, email: text });
+                setInfo({ ...info, email: text });
                 if (errors.email) {
                   const { email, ...rest } = errors;
                   setErrors(rest);
@@ -335,34 +324,6 @@ export default function ServiceProviderRegistrationScreen() {
             />
             {errors.email && (
               <Text style={[styles.errorText, { color: colors.danger }]}>{errors.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Phone Number *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: colors.inputBackground,
-                  borderColor: errors.phone ? colors.danger : colors.border,
-                  color: colors.text,
-                }
-              ]}
-              placeholder="Enter your phone number"
-              placeholderTextColor={colors.textSecondary}
-              value={personalInfo.phone}
-              onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, phone: text });
-                if (errors.phone) {
-                  const { phone, ...rest } = errors;
-                  setErrors(rest);
-                }
-              }}
-              keyboardType="phone-pad"
-            />
-            {errors.phone && (
-              <Text style={[styles.errorText, { color: colors.danger }]}>{errors.phone}</Text>
             )}
           </View>
 
@@ -381,9 +342,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Enter your business name"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.businessName}
+              value={info.businessName}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, businessName: text });
+                setInfo({ ...info, businessName: text });
                 if (errors.businessName) {
                   const { businessName, ...rest } = errors;
                   setErrors(rest);
@@ -408,9 +369,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Describe your automotive services and expertise"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.businessDescription}
+              value={info.businessDescription}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, businessDescription: text });
+                setInfo({ ...info, businessDescription: text });
                 if (errors.businessDescription) {
                   const { businessDescription, ...rest } = errors;
                   setErrors(rest);
@@ -438,9 +399,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="How far will you travel? (e.g., 25)"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.serviceRadius}
+              value={info.serviceRadius}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, serviceRadius: text });
+                setInfo({ ...info, serviceRadius: text });
                 if (errors.serviceRadius) {
                   const { serviceRadius, ...rest } = errors;
                   setErrors(rest);
@@ -468,9 +429,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Enter your street address"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.street1}
+              value={info.street1}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, street1: text });
+                setInfo({ ...info, street1: text });
                 if (errors.street1) {
                   const { street1, ...rest } = errors;
                   setErrors(rest);
@@ -495,9 +456,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Enter apartment or suite number"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.street2}
+              value={info.street2}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, street2: text });
+                setInfo({ ...info, street2: text });
               }}
             />
           </View>
@@ -516,9 +477,9 @@ export default function ServiceProviderRegistrationScreen() {
                 ]}
                 placeholder="City"
                 placeholderTextColor={colors.textSecondary}
-                value={personalInfo.city}
+                value={info.city}
                 onChangeText={(text) => {
-                  setPersonalInfo({ ...personalInfo, city: text });
+                  setInfo({ ...info, city: text });
                   if (errors.city) {
                     const { city, ...rest } = errors;
                     setErrors(rest);
@@ -537,9 +498,9 @@ export default function ServiceProviderRegistrationScreen() {
                 borderColor: errors.state ? colors.danger : colors.border 
               }]}>
                 <Picker
-                  selectedValue={personalInfo.state}
+                  selectedValue={info.state}
                   onValueChange={(value) => {
-                    setPersonalInfo({ ...personalInfo, state: value });
+                    setInfo({ ...info, state: value });
                     if (errors.state) {
                       const { state, ...rest } = errors;
                       setErrors(rest);
@@ -572,9 +533,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="12345"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.zip}
+              value={info.zip}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, zip: text });
+                setInfo({ ...info, zip: text });
                 if (errors.zip) {
                   const { zip, ...rest } = errors;
                   setErrors(rest);
@@ -601,9 +562,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Create a password (minimum 6 characters)"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.password}
+              value={info.password}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, password: text });
+                setInfo({ ...info, password: text });
                 if (errors.password) {
                   const { password, ...rest } = errors;
                   setErrors(rest);
@@ -629,9 +590,9 @@ export default function ServiceProviderRegistrationScreen() {
               ]}
               placeholder="Confirm your password"
               placeholderTextColor={colors.textSecondary}
-              value={personalInfo.confirmPassword}
+              value={info.confirmPassword}
               onChangeText={(text) => {
-                setPersonalInfo({ ...personalInfo, confirmPassword: text });
+                setInfo({ ...info, confirmPassword: text });
                 if (errors.confirmPassword) {
                   const { confirmPassword, ...rest } = errors;
                   setErrors(rest);
@@ -643,30 +604,6 @@ export default function ServiceProviderRegistrationScreen() {
               <Text style={[styles.errorText, { color: colors.danger }]}>{errors.confirmPassword}</Text>
             )}
           </View>
-
-          <View style={[styles.infoBox, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}>
-            <Text style={[styles.infoTitle, { color: colors.primary }]}>
-              Service Management
-            </Text>
-            <Text style={[styles.infoText, { color: colors.text }]}>
-              You can add and manage your services after completing registration from your profile settings.
-            </Text>
-          </View>
-
-          <View style={styles.termsContainer}>
-            <TouchableOpacity
-              style={[styles.checkbox, acceptedTerms && { backgroundColor: colors.primary }]}
-              onPress={() => setAcceptedTerms(!acceptedTerms)}
-            >
-              {acceptedTerms && <Check size={16} color="white" />}
-            </TouchableOpacity>
-            <Text style={[styles.termsText, { color: colors.text }]}>
-              I accept the terms of service and privacy policy *
-            </Text>
-          </View>
-          {errors.terms && (
-            <Text style={[styles.errorText, { color: colors.danger }]}>{errors.terms}</Text>
-          )}
 
           <TouchableOpacity
             style={[
@@ -798,42 +735,6 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 48,
-  },
-  infoBox: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginVertical: 8,
-  },
-  infoTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  termsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  termsText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    flex: 1,
   },
   button: {
     height: 48,
