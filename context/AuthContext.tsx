@@ -222,13 +222,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Creating profile with data:', profileData);
 
-      // Use upsert to handle potential conflicts
+      // Insert profile (no upsert needed for new users)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .upsert([profileData], { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
+        .insert([profileData])
         .select()
         .single();
 
@@ -275,13 +272,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log('Creating service provider with data:', serviceProviderData);
 
-        // Use upsert for service provider as well
+        // Insert service provider record (no upsert needed for new users)
         const { data: serviceProvider, error: serviceProviderError } = await supabase
           .from('service_providers')
-          .upsert([serviceProviderData], { 
-            onConflict: 'user_id',
-            ignoreDuplicates: false 
-          })
+          .insert([serviceProviderData])
           .select()
           .single();
 
