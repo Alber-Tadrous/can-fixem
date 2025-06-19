@@ -201,9 +201,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('User signed up successfully:', authData.user.id);
 
       // Wait for the auth user to be fully created
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Increased wait time
 
-      // Create the profile with optional address fields
+      // Create the profile with all provided data
       const profileData = {
         id: authData.user.id,
         name: userData.name,
@@ -222,9 +222,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Creating profile with data:', profileData);
 
+      // Use upsert to handle potential conflicts
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .insert([profileData])
+        .upsert([profileData], { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        })
         .select()
         .single();
 
@@ -271,9 +275,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log('Creating service provider with data:', serviceProviderData);
 
+        // Use upsert for service provider as well
         const { data: serviceProvider, error: serviceProviderError } = await supabase
           .from('service_providers')
-          .insert([serviceProviderData])
+          .upsert([serviceProviderData], { 
+            onConflict: 'user_id',
+            ignoreDuplicates: false 
+          })
           .select()
           .single();
 
