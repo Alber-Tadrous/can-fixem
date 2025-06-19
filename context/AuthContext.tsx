@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const serviceProviderData = {
           user_id: authData.user.id,
           business_name: userData.businessName || `${userData.name}'s Service`,
-          description: userData.description || `Professional automotive service provider`,
+          description: userData.description || 'Professional automotive service provider',
           services: userData.services || [],
           service_radius: userData.serviceRadius || 25,
           rating: null,
@@ -287,8 +287,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (serviceProviderError) {
           console.error('Service provider creation error:', serviceProviderError);
-          // Don't fail the entire registration for this, just log it
-          console.warn('Service provider record creation failed, but user profile was created successfully');
+          
+          // Clean up profile and auth user if service provider creation fails
+          try {
+            await supabase.from('profiles').delete().eq('id', authData.user.id);
+            await supabase.auth.signOut();
+          } catch (cleanupError) {
+            console.error('Error cleaning up after service provider creation failure:', cleanupError);
+          }
+          
+          throw new Error(`Failed to create service provider record: ${serviceProviderError.message}`);
         } else {
           console.log('Service provider record created successfully:', serviceProvider);
         }
