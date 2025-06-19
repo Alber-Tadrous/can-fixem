@@ -22,15 +22,8 @@ module.exports = {
       statements: 70
     }
   },
-  moduleNameMapper: {
+  moduleNameMapping: {
     '^@/(.*)$': '<rootDir>/$1'
-  },
-  transform: {
-    '^.+\\.(js|ts|tsx)$': ['babel-jest', {
-      presets: [
-        ['babel-preset-expo', { jsxRuntime: 'automatic' }]
-      ]
-    }]
   },
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|expo|@expo|@supabase|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-navigation|lucide-react-native)/)'
@@ -40,13 +33,10 @@ module.exports = {
   globals: {
     __DEV__: true
   },
-  // Fix for Object.defineProperty issues
   testEnvironmentOptions: {
     url: 'http://localhost'
   },
-  // Prevent Jest from trying to transform certain modules
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
-  // Clear mocks between tests
   clearMocks: true,
   restoreMocks: true
 };
