@@ -1,10 +1,22 @@
 module.exports = function (api) {
   api.cache(true);
+  
+  const isTest = api.env('test');
+  
   return {
     presets: [
-      ['babel-preset-expo'],
-      ['@babel/preset-env', { targets: { node: 'current' } }],
-      '@babel/preset-typescript'
+      ['babel-preset-expo', { 
+        jsxRuntime: 'automatic',
+        // Use classic runtime for tests to avoid issues
+        jsxImportSource: isTest ? undefined : 'react'
+      }],
+      ...(isTest ? [
+        ['@babel/preset-env', { 
+          targets: { node: 'current' },
+          modules: 'commonjs'
+        }],
+        '@babel/preset-typescript'
+      ] : [])
     ],
     plugins: [
       ['module:react-native-dotenv', {
@@ -14,7 +26,9 @@ module.exports = function (api) {
         whitelist: null,
         safe: false,
         allowUndefined: true
-      }]
+      }],
+      // Add reanimated plugin for tests
+      ...(isTest ? [] : ['react-native-reanimated/plugin'])
     ]
   };
 };
