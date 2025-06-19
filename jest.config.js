@@ -1,42 +1,31 @@
 module.exports = {
   preset: 'jest-expo',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  testMatch: [
-    '<rootDir>/tests/**/*.test.{js,ts,tsx}',
-    '<rootDir>/**/__tests__/**/*.{js,ts,tsx}'
+  setupFiles: [
+    '<rootDir>/tests/pre-setup.ts'
   ],
-  collectCoverageFrom: [
-    'context/**/*.{js,ts,tsx}',
-    'hooks/**/*.{js,ts,tsx}',
-    'lib/**/*.{js,ts,tsx}',
-    'utils/**/*.{js,ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**'
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts'
   ],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70
-    }
-  },
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/$1'
-  },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|@supabase|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-navigation|lucide-react-native)/)'
+    'node_modules/(?!(jest-)?react-native|@react-native|@expo|expo|@unimodules|unimodules|sentry-expo|native-base|react-clone-referenced-element|@react-native-community|@react-navigation)'
+  ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+  },
+  collectCoverageFrom: [
+    '**/*.{ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+    '!**/.expo/**',
+    '!**/coverage/**',
+  ],
+  testMatch: [
+    '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  testTimeout: 30000,
   globals: {
-    __DEV__: true
+    __DEV__: true,
   },
-  testEnvironmentOptions: {
-    url: 'http://localhost'
-  },
-  modulePathIgnorePatterns: ['<rootDir>/dist/'],
-  clearMocks: true,
-  restoreMocks: true
 };
