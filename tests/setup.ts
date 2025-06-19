@@ -1,6 +1,31 @@
 import 'react-native-url-polyfill/auto';
 
-// Mock expo-router
+// Mock console for cleaner test output
+const originalConsole = global.console;
+global.console = {
+  ...originalConsole,
+  log: process.env.VERBOSE_TESTS ? originalConsole.log : jest.fn(),
+  warn: originalConsole.warn,
+  error: originalConsole.error,
+  info: originalConsole.info,
+  debug: process.env.VERBOSE_TESTS ? originalConsole.debug : jest.fn(),
+};
+
+// Mock React Native modules
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'web',
+    select: (obj: any) => obj.web || obj.default || obj.native,
+  },
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  Dimensions: {
+    get: () => ({ width: 375, height: 667 }),
+  },
+}));
+
+// Mock Expo modules
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -16,7 +41,6 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-// Mock expo modules that aren't available in test environment
 jest.mock('expo-splash-screen', () => ({
   preventAutoHideAsync: jest.fn(),
   hideAsync: jest.fn(),
@@ -44,39 +68,40 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   clear: jest.fn(),
 }));
 
-// Mock React Native components for testing
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Platform: {
-      ...RN.Platform,
-      OS: 'web',
-      select: (obj: any) => obj.web || obj.default,
-    },
-  };
-});
+jest.mock('lucide-react-native', () => ({
+  ArrowLeft: () => 'ArrowLeft',
+  Plus: () => 'Plus',
+  Trash2: () => 'Trash2',
+  Check: () => 'Check',
+  X: () => 'X',
+}));
 
-// Global test configuration
+// Mock React Native Picker
+jest.mock('@react-native-picker/picker', () => ({
+  Picker: {
+    Item: ({ children }: any) => children,
+  },
+}));
+
+// Global test setup
 beforeAll(async () => {
-  console.log('Setting up test environment...');
+  if (process.env.VERBOSE_TESTS) {
+    console.log('🧪 Setting up test environment...');
+  }
   
   // Ensure we're using test environment
-  if (!process.env.EXPO_PUBLIC_SUPABASE_URL?.includes('test') && 
-      !process.env.NODE_ENV?.includes('test')) {
-    console.warn('Warning: Not running in test environment');
+  if (!process.env.NODE_ENV?.includes('test')) {
+    console.warn('⚠️  Warning: Not running in test environment');
   }
 });
 
 afterAll(async () => {
-  console.log('Cleaning up test environment...');
+  if (process.env.VERBOSE_TESTS) {
+    console.log('🧹 Cleaning up test environment...');
+  }
 });
 
-// Configure console for tests
-global.console = {
-  ...console,
-  // Suppress console.log in tests unless explicitly needed
-  log: process.env.VERBOSE_TESTS ? console.log : jest.fn(),
-  warn: console.warn,
-  error: console.error,
-};
+// Handle unhandled promise rejections in tests
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
