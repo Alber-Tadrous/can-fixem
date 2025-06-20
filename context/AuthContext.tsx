@@ -330,13 +330,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setIsLoading(true);
       
-      // Clear user state immediately to provide instant feedback
-      console.log('🧹 Clearing user state...');
-      setUser(null);
-      
-      // Call Supabase signOut
+      // Call Supabase signOut first - this will trigger the auth state change
       console.log('📡 Calling Supabase signOut...');
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({
+        scope: 'global' // Sign out from all sessions
+      });
       
       if (error) {
         console.error('❌ Supabase logout error:', error);
@@ -346,14 +344,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           statusText: error.statusText,
         });
         
-        // Even if Supabase signOut fails, we've already cleared local state
-        // This ensures the user appears logged out in the UI
-        console.log('⚠️ Supabase signOut failed, but local state cleared');
+        // Even if Supabase signOut fails, clear local state
+        console.log('⚠️ Supabase signOut failed, clearing local state anyway');
+        setUser(null);
         
         // Don't throw the error - we want the logout to appear successful to the user
-        // The auth state change listener will handle any cleanup
       } else {
         console.log('✅ Supabase signOut successful');
+        // Don't manually clear user state here - let the auth state change handler do it
       }
       
       console.log('🎉 Logout process completed');

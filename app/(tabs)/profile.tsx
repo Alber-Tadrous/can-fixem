@@ -33,12 +33,13 @@ export default function ProfileScreen() {
               console.log('✅ Profile: User confirmed logout');
               
               try {
+                // Call logout function - this will handle the Supabase signOut
                 await logout();
                 console.log('🎉 Profile: Logout completed successfully');
                 
-                // Navigate to auth screen after successful logout
-                console.log('🧭 Profile: Navigating to auth screen...');
-                router.replace('/(auth)');
+                // Don't manually navigate - let the AuthGuard handle it
+                // The auth state change will trigger the AuthGuard to redirect
+                console.log('🧭 Profile: Waiting for AuthGuard to handle navigation...');
                 
               } catch (error) {
                 console.error('❌ Profile: Logout failed:', error);
