@@ -9,6 +9,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSegments } from 'expo-router';
+import { useSessionTracking } from '@/hooks/useSessionTracking';
+import { useAPITracking } from '@/hooks/useAPITracking';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -48,6 +50,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Session Tracking Wrapper
+function SessionTrackingWrapper({ children }: { children: React.ReactNode }) {
+  useSessionTracking();
+  useAPITracking();
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   useFrameworkReady();
 
@@ -74,16 +83,18 @@ export default function RootLayout() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <AuthGuard>
-            <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="service/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="provider/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-            </Stack>
-          </AuthGuard>
+          <SessionTrackingWrapper>
+            <AuthGuard>
+              <StatusBar style="auto" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="service/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="provider/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+              </Stack>
+            </AuthGuard>
+          </SessionTrackingWrapper>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

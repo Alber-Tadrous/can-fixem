@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Wrench, Chrome as Home, User, MessageSquare, Clock } from 'lucide-react-native';
+import { Wrench, Chrome as Home, User, MessageSquare, Clock, BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function TabLayout() {
@@ -59,6 +59,15 @@ export default function TabLayout() {
           title: 'Messages',
           tabBarIcon: ({ color, size }) => (
             <MessageSquare size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, size }) => (
+            <BarChart3 size={size} color={color} />
           ),
         }}
       />
