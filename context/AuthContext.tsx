@@ -311,23 +311,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🚪 Starting comprehensive logout process...');
       console.log('👤 Current user before logout:', user?.email);
       
-      // Set loading state immediately
+      // Step 1: Set loading state and clear user immediately to trigger navigation
       setIsLoading(true);
       
-      // Get current session info before clearing
+      // Step 2: Clear user state FIRST to trigger AuthGuard navigation immediately
+      console.log('🧹 Clearing user state immediately to trigger navigation...');
+      setUser(null);
+      
+      // Step 3: Get current session info before clearing
       const { data: { session } } = await supabase.auth.getSession();
       const currentSessionId = sessionTracker.sessionId;
       
       console.log('📊 Current session ID:', currentSessionId);
       console.log('🔑 Current auth session exists:', !!session);
       
-      // Step 1: End session tracking before clearing user state
+      // Step 4: End session tracking
       if (sessionTracker.isActive && currentSessionId) {
         console.log('📊 Ending session tracking...');
         await sessionTracker.endSession('manual', 'User initiated logout');
       }
       
-      // Step 2: Call backend logout API to invalidate session server-side
+      // Step 5: Call backend logout API to invalidate session server-side
       if (session?.access_token && currentSessionId) {
         try {
           console.log('🌐 Calling backend logout API...');
@@ -360,11 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('⚠️ No session token or session ID for backend logout');
       }
       
-      // Step 3: Clear user state immediately to prevent UI issues
-      console.log('🧹 Clearing user state immediately...');
-      setUser(null);
-      
-      // Step 4: Clear any stored session data from local storage
+      // Step 6: Clear any stored session data from local storage
       console.log('🗑️ Clearing local storage...');
       if (typeof window !== 'undefined') {
         try {
@@ -390,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Step 5: Call Supabase signOut with global scope to clear all sessions
+      // Step 7: Call Supabase signOut with global scope to clear all sessions
       console.log('📡 Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all sessions
@@ -411,7 +411,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ Supabase signOut successful');
       }
       
-      // Step 6: Force clear the Supabase client session
+      // Step 8: Force clear the Supabase client session
       console.log('🔄 Force clearing Supabase client session...');
       try {
         // Access the internal session and clear it
@@ -427,7 +427,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('⚠️ Error checking session after logout:', sessionError);
       }
       
-      console.log('🎉 Comprehensive logout process completed - auth state change will trigger navigation');
+      console.log('🎉 Comprehensive logout process completed - AuthGuard should have triggered navigation');
       
     } catch (error) {
       console.error('❌ Unexpected error during logout:', error);
@@ -439,7 +439,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('⚠️ Logout had errors but user state cleared');
       
     } finally {
-      // Always set loading to false and ensure user is null
+      // Always set loading to false
       setIsLoading(false);
       console.log('🏁 Logout process finished, isLoading set to false');
       

@@ -37,33 +37,31 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     console.log('🛡️ AuthGuard: In auth group:', inAuthGroup);
 
-    // Use a shorter delay but ensure navigation happens
-    const navigationTimeout = setTimeout(() => {
-      if (!isAuthenticated && !inAuthGroup) {
-        // User is not signed in and not in auth group, redirect to auth
-        console.log('🧭 AuthGuard: Redirecting to auth - user not logged in');
-        console.log('🧭 AuthGuard: Using router.replace to navigate to /(auth)');
-        router.replace('/(auth)');
-      } else if (isAuthenticated && inAuthGroup) {
-        // User is signed in but in auth group, redirect to main app
-        console.log('🧭 AuthGuard: Redirecting to main app - user is logged in');
-        console.log('🧭 AuthGuard: Using router.replace to navigate to /(tabs)');
-        router.replace('/(tabs)');
-      } else {
-        console.log('🛡️ AuthGuard: No navigation needed');
-        console.log('🛡️ AuthGuard: User authenticated:', isAuthenticated);
-        console.log('🛡️ AuthGuard: In correct section:', inAuthGroup ? 'auth' : 'main');
-      }
-    }, 100); // Reduced delay for faster response
-
-    return () => clearTimeout(navigationTimeout);
+    // Handle navigation with immediate effect for logout scenarios
+    if (!isAuthenticated && !inAuthGroup) {
+      // User is not signed in and not in auth group, redirect to auth immediately
+      console.log('🧭 AuthGuard: User not authenticated, redirecting to auth immediately');
+      router.replace('/(auth)');
+    } else if (isAuthenticated && inAuthGroup) {
+      // User is signed in but in auth group, redirect to main app
+      console.log('🧭 AuthGuard: User authenticated but in auth group, redirecting to main app');
+      router.replace('/(tabs)');
+    } else {
+      console.log('🛡️ AuthGuard: No navigation needed');
+      console.log('🛡️ AuthGuard: User authenticated:', isAuthenticated);
+      console.log('🛡️ AuthGuard: In correct section:', inAuthGroup ? 'auth' : 'main');
+    }
   }, [user, isAuthenticated, segments, isLoading, router]);
 
-  // Additional effect to handle immediate logout navigation
+  // Additional effect specifically for handling logout (when user becomes null)
   useEffect(() => {
-    // If user becomes null (logged out) and we're not in auth group, navigate immediately
-    if (!isLoading && !user && segments[0] !== '(auth)') {
-      console.log('🚨 AuthGuard: User became null, immediate redirect to auth');
+    // This effect specifically handles the logout scenario
+    if (!isLoading && user === null && segments[0] !== '(auth)') {
+      console.log('🚨 AuthGuard: User became null (logout detected), forcing immediate redirect');
+      console.log('🚨 AuthGuard: Current segments:', segments);
+      console.log('🚨 AuthGuard: Forcing navigation to /(auth)');
+      
+      // Use replace to ensure we don't keep the protected route in history
       router.replace('/(auth)');
     }
   }, [user, isLoading, segments, router]);

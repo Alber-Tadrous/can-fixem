@@ -33,15 +33,19 @@ export default function ProfileScreen() {
               console.log('✅ Profile: User confirmed logout');
               
               try {
-                // Call logout function - this will handle the Supabase signOut
-                // and clear all user state immediately
+                // Call logout function - this will clear user state immediately
+                // which should trigger AuthGuard to navigate to auth screen
                 console.log('🔄 Profile: Calling logout function...');
                 await logout();
                 console.log('🎉 Profile: Logout completed successfully');
                 
-                // Force navigation to auth screen immediately after logout
-                console.log('🧭 Profile: Force navigating to auth screen...');
-                router.replace('/(auth)');
+                // The AuthGuard should handle navigation automatically
+                // But let's add a small delay and force navigation if needed
+                setTimeout(() => {
+                  console.log('🧭 Profile: Checking if navigation happened...');
+                  // Force navigation to auth screen as backup
+                  router.replace('/(auth)');
+                }, 100);
                 
               } catch (error) {
                 console.error('❌ Profile: Logout failed:', error);
