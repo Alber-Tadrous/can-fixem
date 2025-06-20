@@ -347,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🧹 Clearing user state...');
       setUser(null);
       
-      // Call Supabase signOut
+      // Call Supabase signOut - this will trigger the auth state change
       console.log('📡 Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all sessions
@@ -367,7 +367,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ Supabase signOut successful');
       }
       
-      console.log('🎉 Logout process completed');
+      console.log('🎉 Logout process completed - auth state change will trigger navigation');
       
     } catch (error) {
       console.error('❌ Unexpected error during logout:', error);
@@ -418,7 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser
   };
 
-  console.log('🔄 AuthContext render - User:', user?.email || 'None', 'Loading:', isLoading);
+  console.log('🔄 AuthContext render - User:', user?.email || 'None', 'Loading:', isLoading, 'Authenticated:', !!user);
 
   return (
     <AuthContext.Provider value={contextValue}>
