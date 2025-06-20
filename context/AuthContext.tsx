@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
+import { sessionTracker } from '@/lib/sessionTracker';
 
 interface AuthContextProps {
   user: User | null;
@@ -330,7 +331,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setIsLoading(true);
       
-      // Call Supabase signOut first - this will trigger the auth state change
+      // End session tracking BEFORE calling Supabase signOut
+      if (sessionTracker.isActive) {
+        console.log('📊 Ending session tracking...');
+        try {
+          await sessionTracker.endSession('manual', 'User initiated logout');
+          console.log('✅ Session tracking ended successfully');
+        } catch (sessionError) {
+          console.error('⚠️ Error ending session tracking:', sessionError);
+          // Don't fail logout if session tracking fails
+        }
+      }
+      
+      // Clear user state immediately to prevent UI issues
+      console.log('🧹 Clearing user state...');
+      setUser(null);
+      
+      // Call Supabase signOut
       console.log('📡 Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all sessions
@@ -344,14 +361,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           statusText: error.statusText,
         });
         
-        // Even if Supabase signOut fails, clear local state
-        console.log('⚠️ Supabase signOut failed, clearing local state anyway');
-        setUser(null);
-        
         // Don't throw the error - we want the logout to appear successful to the user
+        // User state is already cleared above
       } else {
         console.log('✅ Supabase signOut successful');
-        // Don't manually clear user state here - let the auth state change handler do it
       }
       
       console.log('🎉 Logout process completed');

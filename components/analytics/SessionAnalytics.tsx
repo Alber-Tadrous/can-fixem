@@ -4,7 +4,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { supabase } from '@/lib/supabase';
 import { SessionData, SessionEvent, SecurityAlert } from '@/types/session';
-import { Clock, Activity, Shield, TriangleAlert as AlertTriangle, Eye, Zap } from 'lucide-react-native';
+import { Clock, Activity, Shield, TriangleAlert as AlertTriangle, Eye, Zap, RefreshCw } from 'lucide-react-native';
 
 interface SessionAnalyticsProps {
   userId?: string;
@@ -37,7 +37,7 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
         .limit(1);
 
       if (tableCheckError) {
-        console.warn('⚠️ SessionAnalytics: Session tracking tables not found');
+        console.warn('⚠️ SessionAnalytics: Session tracking tables not found:', tableCheckError.message);
         setTablesExist(false);
         setLoading(false);
         return;
@@ -142,9 +142,12 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-          Loading session analytics...
-        </Text>
+        <View style={styles.loadingContainer}>
+          <RefreshCw size={24} color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading session analytics...
+          </Text>
+        </View>
       </View>
     );
   }
@@ -172,8 +175,25 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
               <Text style={[styles.basicSessionText, { color: colors.text }]}>
                 Session ID: {sessionId}
               </Text>
+              <Text style={[styles.basicSessionText, { color: colors.text }]}>
+                Page Views: {activityStats.pageViews}
+              </Text>
+              <Text style={[styles.basicSessionText, { color: colors.text }]}>
+                API Calls: {activityStats.apiCalls}
+              </Text>
+              <Text style={[styles.basicSessionText, { color: colors.text }]}>
+                User Actions: {activityStats.userActions}
+              </Text>
             </View>
           )}
+          
+          <TouchableOpacity 
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={checkTablesAndLoadData}
+          >
+            <RefreshCw size={16} color="white" />
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -342,9 +362,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
   loadingText: {
     textAlign: 'center',
-    marginTop: 50,
     fontSize: 16,
   },
   noDataContainer: {
@@ -380,6 +405,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: '100%',
     alignItems: 'center',
+    marginBottom: 16,
   },
   basicSessionTitle: {
     fontSize: 16,
@@ -389,6 +415,19 @@ const styles = StyleSheet.create({
   basicSessionText: {
     fontSize: 14,
     marginBottom: 4,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   section: {
     borderRadius: 12,

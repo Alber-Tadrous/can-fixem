@@ -40,12 +40,11 @@ export function useSessionTracking() {
   // End session when user logs out
   useEffect(() => {
     if (!isAuthenticated && sessionStartedRef.current) {
-      console.log('🎯 useSessionTracking: Ending session for logged out user');
+      console.log('🎯 useSessionTracking: User logged out, session should already be ended');
       sessionStartedRef.current = false;
       
-      sessionTracker.endSession('manual', 'User logged out').catch(error => {
-        console.error('❌ useSessionTracking: Failed to end session:', error);
-      });
+      // Don't end session here - it should be handled by the logout function
+      // This is just to reset our local flag
     }
   }, [isAuthenticated]);
 
