@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Auth state changed:', event, session?.user?.id);
       
       if (event === 'SIGNED_OUT') {
-        console.log('🚪 User signed out - clearing user state');
+        console.log('🚪 User signed out - clearing user state and redirecting');
         setUser(null);
         setIsLoading(false);
         return;
@@ -328,6 +328,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🚪 Starting logout process...');
       console.log('👤 Current user before logout:', user?.email);
+      console.log('📊 Session tracker active:', sessionTracker.isActive);
+      console.log('📊 Current session ID:', sessionTracker.sessionId);
       
       setIsLoading(true);
       
@@ -341,6 +343,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('⚠️ Error ending session tracking:', sessionError);
           // Don't fail logout if session tracking fails
         }
+      } else {
+        console.log('📊 No active session to end');
       }
       
       // Clear user state immediately to prevent UI issues

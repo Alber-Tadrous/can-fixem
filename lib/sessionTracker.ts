@@ -38,6 +38,8 @@ class SessionTracker {
       this.resetActivityCounts();
       this.securityFlags = [];
       
+      console.log('📊 SessionTracker: Generated session ID:', this.currentSessionId);
+      
       // Check if tables exist before proceeding with database operations
       const tablesExist = await this.checkTablesExist();
       if (!tablesExist) {
@@ -75,6 +77,8 @@ class SessionTracker {
         status: 'active',
         cleanup_status: 'pending'
       };
+
+      console.log('📊 SessionTracker: Creating session record:', sessionData);
 
       // Store session in database
       const { error } = await supabase
@@ -122,6 +126,9 @@ class SessionTracker {
 
     try {
       console.log('📊 SessionTracker: Ending session:', this.currentSessionId);
+      console.log('📊 SessionTracker: Logout method:', logoutMethod);
+      console.log('📊 SessionTracker: Logout reason:', reason);
+      console.log('📊 SessionTracker: Database tracking enabled:', this.isTracking);
       
       const endTime = new Date();
       const duration = endTime.getTime() - this.sessionStartTime.getTime();
@@ -129,32 +136,55 @@ class SessionTracker {
       // Only update database if tracking is enabled and tables exist
       if (this.isTracking && this.isInitialized) {
         console.log('📊 SessionTracker: Updating session in database...');
+        console.log('📊 SessionTracker: Session ID to update:', this.currentSessionId);
         
-        // Update session record
-        const { error } = await supabase
+        // Update session record with explicit session ID matching
+        const updateData = {
+          end_time: endTime.toISOString(),
+          duration: duration,
+          logout_method: logoutMethod,
+          logout_reason: reason,
+          page_views: this.activityCounts.pageViews,
+          api_calls: this.activityCounts.apiCalls,
+          user_actions: this.activityCounts.userActions,
+          idle_time: this.activityCounts.idleTime,
+          security_flags: this.securityFlags,
+          status: 'terminated',
+          cleanup_status: 'completed',
+          updated_at: endTime.toISOString()
+        };
+
+        console.log('📊 SessionTracker: Update data:', updateData);
+
+        const { data, error, count } = await supabase
           .from('user_sessions')
-          .update({
-            end_time: endTime.toISOString(),
-            duration: duration,
-            logout_method: logoutMethod,
-            logout_reason: reason,
-            page_views: this.activityCounts.pageViews,
-            api_calls: this.activityCounts.apiCalls,
-            user_actions: this.activityCounts.userActions,
-            idle_time: this.activityCounts.idleTime,
-            security_flags: this.securityFlags,
-            status: 'terminated',
-            cleanup_status: 'completed'
-          })
-          .eq('id', this.currentSessionId);
+          .update(updateData)
+          .eq('id', this.currentSessionId)
+          .select();
+
+        console.log('📊 SessionTracker: Update result - Error:', error);
+        console.log('📊 SessionTracker: Update result - Data:', data);
+        console.log('📊 SessionTracker: Update result - Count:', count);
 
         if (error) {
           console.error('❌ SessionTracker: Error updating session:', error);
+          console.error('❌ SessionTracker: Error details:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
+        } else if (!data || data.length === 0) {
+          console.warn('⚠️ SessionTracker: No session record was updated - session may not exist in database');
+          console.warn('⚠️ SessionTracker: This could be due to:');
+          console.warn('   - Session ID mismatch');
+          console.warn('   - RLS policy blocking the update');
+          console.warn('   - Session record was already deleted');
         } else {
-          console.log('✅ SessionTracker: Session updated in database');
+          console.log('✅ SessionTracker: Session updated in database successfully');
         }
 
-        // Log logout event
+        // Log logout event regardless of update success
         await this.logEvent('logout', logoutMethod, {
           logout_method: logoutMethod,
           logout_reason: reason,
@@ -170,6 +200,10 @@ class SessionTracker {
 
       // Cleanup
       this.stopActivityMonitoring();
+      
+      // Store session info before clearing for final log
+      const finalSessionId = this.currentSessionId;
+      
       this.currentSessionId = null;
       this.sessionStartTime = null;
       this.isTracking = false;
@@ -177,7 +211,7 @@ class SessionTracker {
       this.resetActivityCounts();
       this.securityFlags = [];
 
-      console.log('✅ SessionTracker: Session ended successfully');
+      console.log('✅ SessionTracker: Session ended successfully:', finalSessionId);
 
     } catch (error) {
       console.error('❌ SessionTracker: Error ending session:', error);
@@ -185,9 +219,13 @@ class SessionTracker {
       // Mark cleanup as failed if possible
       if (this.currentSessionId && this.isTracking) {
         try {
+          console.log('📊 SessionTracker: Marking cleanup as failed for session:', this.currentSessionId);
           await supabase
             .from('user_sessions')
-            .update({ cleanup_status: 'failed' })
+            .update({ 
+              cleanup_status: 'failed',
+              updated_at: new Date().toISOString()
+            })
             .eq('id', this.currentSessionId);
         } catch (updateError) {
           console.error('❌ SessionTracker: Error marking cleanup as failed:', updateError);
@@ -249,6 +287,8 @@ class SessionTracker {
         device_info: await this.getDeviceInfo()
       };
 
+      console.log('📊 SessionTracker: Logging event:', eventType, subtype);
+
       // Store event in database
       const { error } = await supabase
         .from('session_events')
@@ -256,6 +296,8 @@ class SessionTracker {
 
       if (error) {
         console.error('❌ SessionTracker: Error logging event:', error);
+      } else {
+        console.log('✅ SessionTracker: Event logged successfully');
       }
 
       // Update activity counts
@@ -427,7 +469,10 @@ class SessionTracker {
     if (this.currentSessionId && this.isTracking && this.isInitialized) {
       supabase
         .from('user_sessions')
-        .update({ last_activity: this.lastActivityTime.toISOString() })
+        .update({ 
+          last_activity: this.lastActivityTime.toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', this.currentSessionId)
         .then(({ error }) => {
           if (error) {
