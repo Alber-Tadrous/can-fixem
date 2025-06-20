@@ -4,7 +4,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { supabase } from '@/lib/supabase';
 import { SessionData, SessionEvent, SecurityAlert } from '@/types/session';
-import { Clock, Activity, Shield, AlertTriangle, Eye, Zap } from 'lucide-react-native';
+import { Clock, Activity, Shield, TriangleAlert as AlertTriangle, Eye, Zap } from 'lucide-react-native';
 
 interface SessionAnalyticsProps {
   userId?: string;

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Wrench, Chrome as Home, User, MessageSquare, Clock, BarChart3 } from 'lucide-react-native';
+import { Wrench, Chrome as Home, User, MessageSquare, Clock, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function TabLayout() {
