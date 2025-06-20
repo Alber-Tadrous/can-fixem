@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
@@ -8,10 +8,28 @@ import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Clear form when component mounts (useful after logout)
+  useEffect(() => {
+    console.log('🔐 LoginScreen: Component mounted');
+    console.log('🔐 LoginScreen: Is authenticated:', isAuthenticated);
+    
+    // Clear form fields when returning to login screen
+    setEmail('');
+    setPassword('');
+    setError('');
+  }, []);
+
+  // Clear error when user starts typing
+  useEffect(() => {
+    if (error && (email || password)) {
+      setError('');
+    }
+  }, [email, password, error]);
 
   const handleLogin = async () => {
     try {
@@ -66,6 +84,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!isLoading}
+              autoComplete="email"
             />
           </View>
 
@@ -79,6 +98,7 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               secureTextEntry
               editable={!isLoading}
+              autoComplete="password"
             />
           </View>
 

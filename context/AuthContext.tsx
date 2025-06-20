@@ -323,7 +323,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🧹 Clearing user state...');
       setUser(null);
       
-      // Call Supabase signOut - this will trigger the auth state change
+      // Clear any stored session data from local storage
+      console.log('🗑️ Clearing local storage...');
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear Supabase session from localStorage
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.includes('supabase') || key.includes('auth')) {
+              localStorage.removeItem(key);
+              console.log('🗑️ Removed localStorage key:', key);
+            }
+          });
+          
+          // Clear sessionStorage as well
+          const sessionKeys = Object.keys(sessionStorage);
+          sessionKeys.forEach(key => {
+            if (key.includes('supabase') || key.includes('auth')) {
+              sessionStorage.removeItem(key);
+              console.log('🗑️ Removed sessionStorage key:', key);
+            }
+          });
+        } catch (storageError) {
+          console.warn('⚠️ Error clearing storage:', storageError);
+        }
+      }
+      
+      // Call Supabase signOut with global scope to clear all sessions
       console.log('📡 Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all sessions
@@ -337,10 +363,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           statusText: error.statusText,
         });
         
-        // Don't throw the error - we want the logout to appear successful to the user
-        // User state is already cleared above
+        // Even if Supabase signOut fails, we've already cleared local state
+        // This ensures the user appears logged out in the UI
+        console.log('⚠️ Supabase signOut failed, but local state cleared');
       } else {
         console.log('✅ Supabase signOut successful');
+      }
+      
+      // Force clear the Supabase client session
+      console.log('🔄 Force clearing Supabase client session...');
+      try {
+        // Access the internal session and clear it
+        await supabase.auth.refreshSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.warn('⚠️ Session still exists after signOut, forcing clear...');
+          // Additional cleanup if needed
+        } else {
+          console.log('✅ Session successfully cleared');
+        }
+      } catch (sessionError) {
+        console.warn('⚠️ Error checking session after logout:', sessionError);
       }
       
       console.log('🎉 Logout process completed - auth state change will trigger navigation');

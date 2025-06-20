@@ -11,6 +11,36 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // Add additional options to ensure proper session management
+      flowType: 'pkce',
+      debug: false, // Set to true for debugging auth issues
     },
   }
 );
+
+// Add a helper function to completely clear the session
+export const clearSupabaseSession = async () => {
+  try {
+    console.log('🧹 Clearing Supabase session completely...');
+    
+    // Sign out with global scope
+    await supabase.auth.signOut({ scope: 'global' });
+    
+    // Clear AsyncStorage keys related to Supabase
+    const keys = await AsyncStorage.getAllKeys();
+    const supabaseKeys = keys.filter(key => 
+      key.includes('supabase') || 
+      key.includes('auth') ||
+      key.includes('sb-')
+    );
+    
+    if (supabaseKeys.length > 0) {
+      await AsyncStorage.multiRemove(supabaseKeys);
+      console.log('🧹 Cleared AsyncStorage keys:', supabaseKeys);
+    }
+    
+    console.log('✅ Supabase session cleared completely');
+  } catch (error) {
+    console.error('❌ Error clearing Supabase session:', error);
+  }
+};

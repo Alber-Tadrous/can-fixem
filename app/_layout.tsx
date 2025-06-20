@@ -37,7 +37,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     console.log('🛡️ AuthGuard: In auth group:', inAuthGroup);
 
-    // Add a small delay to ensure navigation state is ready
+    // Add a longer delay to ensure navigation state is ready and auth state is settled
     const navigationTimeout = setTimeout(() => {
       if (!isAuthenticated && !inAuthGroup) {
         // User is not signed in and not in auth group, redirect to auth
@@ -52,7 +52,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         console.log('🛡️ AuthGuard: User authenticated:', isAuthenticated);
         console.log('🛡️ AuthGuard: In correct section:', inAuthGroup ? 'auth' : 'main');
       }
-    }, 100); // Small delay to ensure router is ready
+    }, 500); // Increased delay to ensure auth state is settled
 
     return () => clearTimeout(navigationTimeout);
   }, [user, isAuthenticated, segments, isLoading, router]);
