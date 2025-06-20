@@ -23,7 +23,10 @@ class SessionTracker {
   private readonly MAX_SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor() {
-    this.setupActivityListeners();
+    // Only setup activity listeners if we're in a browser environment
+    if (typeof window !== 'undefined') {
+      this.setupActivityListeners();
+    }
   }
 
   // Initialize session tracking
@@ -64,7 +67,7 @@ class SessionTracker {
         login_method: loginMethod,
         login_success: true,
         ip_address: ipAddress,
-        user_agent: navigator.userAgent,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
         device_info: deviceInfo,
         location: location,
         page_views: 0,
@@ -283,7 +286,7 @@ class SessionTracker {
         timestamp: new Date().toISOString(),
         data: data,
         ip_address: await this.getIPAddress(),
-        user_agent: navigator.userAgent,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
         device_info: await this.getDeviceInfo()
       };
 
@@ -414,6 +417,11 @@ class SessionTracker {
 
   // Activity monitoring
   private setupActivityListeners(): void {
+    // Only setup listeners if we're in a web environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
     if (Platform.OS === 'web') {
       // Web-specific listeners
       document.addEventListener('click', () => this.updateLastActivity());
@@ -520,15 +528,17 @@ class SessionTracker {
   private async getDeviceInfo(): Promise<DeviceInfo> {
     return {
       platform: Platform.OS,
-      os: Platform.OS === 'web' ? navigator.platform : Platform.OS,
+      os: Platform.OS === 'web' ? (typeof navigator !== 'undefined' ? navigator.platform : 'unknown') : Platform.OS,
       browser: Platform.OS === 'web' ? this.getBrowserInfo() : 'mobile-app',
-      screen_resolution: Platform.OS === 'web' ? `${screen.width}x${screen.height}` : 'unknown',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language || 'unknown'
+      screen_resolution: Platform.OS === 'web' && typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
+      timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
+      language: typeof navigator !== 'undefined' ? (navigator.language || 'unknown') : 'unknown'
     };
   }
 
   private getBrowserInfo(): string {
+    if (typeof navigator === 'undefined') return 'Unknown';
+    
     const userAgent = navigator.userAgent;
     if (userAgent.includes('Chrome')) return 'Chrome';
     if (userAgent.includes('Firefox')) return 'Firefox';
@@ -539,8 +549,8 @@ class SessionTracker {
 
   private async getLocationInfo(): Promise<GeolocationData | undefined> {
     try {
-      // Only get location if user grants permission
-      if (Platform.OS === 'web' && navigator.geolocation) {
+      // Only get location if user grants permission and we're in a browser environment
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
         return new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
             (position) => {
