@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 AuthProvider: Initializing...');
     checkUser();
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -309,23 +310,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🚪 Starting logout process...');
       console.log('👤 Current user before logout:', user?.email);
-      console.log('📊 Session tracker active:', sessionTracker.isActive);
-      console.log('📊 Current session ID:', sessionTracker.sessionId);
       
       setIsLoading(true);
       
-      // End session tracking BEFORE calling Supabase signOut
+      // End session tracking before clearing user state
       if (sessionTracker.isActive) {
         console.log('📊 Ending session tracking...');
-        try {
-          await sessionTracker.endSession('manual', 'User initiated logout');
-          console.log('✅ Session tracking ended successfully');
-        } catch (sessionError) {
-          console.error('⚠️ Error ending session tracking:', sessionError);
-          // Don't fail logout if session tracking fails
-        }
-      } else {
-        console.log('📊 No active session to end');
+        await sessionTracker.endSession('manual', 'User initiated logout');
       }
       
       // Clear user state immediately to prevent UI issues

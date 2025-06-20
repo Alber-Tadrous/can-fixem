@@ -17,41 +17,53 @@ SplashScreen.preventAutoHideAsync();
 
 // Auth Guard Component
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
+    console.log('🛡️ AuthGuard: Effect triggered');
+    console.log('🛡️ AuthGuard: User:', user?.email || 'None');
+    console.log('🛡️ AuthGuard: Loading state:', isLoading);
+    console.log('🛡️ AuthGuard: Authenticated:', isAuthenticated);
+    console.log('🛡️ AuthGuard: Current segments:', segments);
+
+    // Don't do anything while loading
     if (isLoading) {
       console.log('🛡️ AuthGuard: Still loading, waiting...');
-      return; // Don't do anything while loading
+      return;
     }
 
     const inAuthGroup = segments[0] === '(auth)';
-
-    console.log('🛡️ AuthGuard: User:', user?.email || 'None');
     console.log('🛡️ AuthGuard: In auth group:', inAuthGroup);
-    console.log('🛡️ AuthGuard: Current segments:', segments);
-    console.log('🛡️ AuthGuard: Loading state:', isLoading);
 
-    if (!user && !inAuthGroup) {
-      // User is not signed in and not in auth group, redirect to auth
-      console.log('🧭 AuthGuard: Redirecting to auth - user not logged in');
-      router.replace('/(auth)');
-    } else if (user && inAuthGroup) {
-      // User is signed in but in auth group, redirect to main app
-      console.log('🧭 AuthGuard: Redirecting to main app - user is logged in');
-      router.replace('/(tabs)');
-    } else {
-      console.log('🛡️ AuthGuard: No navigation needed');
-    }
-  }, [user, segments, isLoading, router]);
+    // Add a small delay to ensure navigation state is ready
+    const navigationTimeout = setTimeout(() => {
+      if (!isAuthenticated && !inAuthGroup) {
+        // User is not signed in and not in auth group, redirect to auth
+        console.log('🧭 AuthGuard: Redirecting to auth - user not logged in');
+        router.replace('/(auth)');
+      } else if (isAuthenticated && inAuthGroup) {
+        // User is signed in but in auth group, redirect to main app
+        console.log('🧭 AuthGuard: Redirecting to main app - user is logged in');
+        router.replace('/(tabs)');
+      } else {
+        console.log('🛡️ AuthGuard: No navigation needed');
+        console.log('🛡️ AuthGuard: User authenticated:', isAuthenticated);
+        console.log('🛡️ AuthGuard: In correct section:', inAuthGroup ? 'auth' : 'main');
+      }
+    }, 100); // Small delay to ensure router is ready
+
+    return () => clearTimeout(navigationTimeout);
+  }, [user, isAuthenticated, segments, isLoading, router]);
 
   // Show loading screen while auth is loading
   if (isLoading) {
+    console.log('🛡️ AuthGuard: Showing loading state');
     return null; // Keep splash screen visible
   }
 
+  console.log('🛡️ AuthGuard: Rendering children');
   return <>{children}</>;
 }
 
@@ -75,14 +87,18 @@ export default function RootLayout() {
   // Hide splash screen once fonts are loaded
   useEffect(() => {
     if (fontsLoaded || fontError) {
+      console.log('🎨 RootLayout: Fonts loaded, hiding splash screen');
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
   // Return null to keep splash screen visible while fonts load
   if (!fontsLoaded && !fontError) {
+    console.log('🎨 RootLayout: Waiting for fonts to load...');
     return null;
   }
+
+  console.log('🎨 RootLayout: Rendering app with fonts loaded');
 
   return (
     <ErrorBoundary>
