@@ -18,17 +18,42 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
   const [recentEvents, setRecentEvents] = useState<SessionEvent[]>([]);
   const [securityAlerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tablesExist, setTablesExist] = useState(false);
 
   useEffect(() => {
     if (userId) {
-      loadSessionData();
+      checkTablesAndLoadData();
     }
   }, [userId]);
 
-  const loadSessionData = async () => {
+  const checkTablesAndLoadData = async () => {
     try {
       setLoading(true);
 
+      // Check if session tracking tables exist
+      const { error: tableCheckError } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .limit(1);
+
+      if (tableCheckError) {
+        console.warn('⚠️ SessionAnalytics: Session tracking tables not found');
+        setTablesExist(false);
+        setLoading(false);
+        return;
+      }
+
+      setTablesExist(true);
+      await loadSessionData();
+    } catch (error) {
+      console.error('❌ SessionAnalytics: Error checking tables:', error);
+      setTablesExist(false);
+      setLoading(false);
+    }
+  };
+
+  const loadSessionData = async () => {
+    try {
       // Load session history
       const { data: sessions, error: sessionsError } = await supabase
         .from('user_sessions')
@@ -124,6 +149,36 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
     );
   }
 
+  if (!tablesExist) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.noDataContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <AlertTriangle size={48} color={colors.warning} />
+          <Text style={[styles.noDataTitle, { color: colors.text }]}>
+            Session Tracking Not Available
+          </Text>
+          <Text style={[styles.noDataMessage, { color: colors.textSecondary }]}>
+            Session tracking tables are not set up in the database. 
+            The app will continue to work normally, but detailed session analytics are not available.
+          </Text>
+          {showRealTime && isActive && (
+            <View style={[styles.basicSessionInfo, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}>
+              <Text style={[styles.basicSessionTitle, { color: colors.primary }]}>
+                Current Session Active
+              </Text>
+              <Text style={[styles.basicSessionText, { color: colors.text }]}>
+                Duration: {formatDuration(sessionDuration)}
+              </Text>
+              <Text style={[styles.basicSessionText, { color: colors.text }]}>
+                Session ID: {sessionId}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Current Session */}
@@ -211,60 +266,72 @@ export default function SessionAnalytics({ userId, showRealTime = true }: Sessio
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
         
-        {recentEvents.slice(0, 10).map((event) => (
-          <View key={event.id} style={styles.eventItem}>
-            <View style={styles.eventHeader}>
-              {getEventIcon(event.event_type)}
-              <Text style={[styles.eventType, { color: colors.text }]}>
-                {event.event_type.replace('_', ' ')}
-              </Text>
-              {event.event_subtype && (
-                <Text style={[styles.eventSubtype, { color: colors.textSecondary }]}>
-                  ({event.event_subtype})
+        {recentEvents.length === 0 ? (
+          <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
+            No recent activity recorded
+          </Text>
+        ) : (
+          recentEvents.slice(0, 10).map((event) => (
+            <View key={event.id} style={styles.eventItem}>
+              <View style={styles.eventHeader}>
+                {getEventIcon(event.event_type)}
+                <Text style={[styles.eventType, { color: colors.text }]}>
+                  {event.event_type.replace('_', ' ')}
                 </Text>
-              )}
+                {event.event_subtype && (
+                  <Text style={[styles.eventSubtype, { color: colors.textSecondary }]}>
+                    ({event.event_subtype})
+                  </Text>
+                )}
+              </View>
+              <Text style={[styles.eventTime, { color: colors.textSecondary }]}>
+                {new Date(event.timestamp).toLocaleString()}
+              </Text>
             </View>
-            <Text style={[styles.eventTime, { color: colors.textSecondary }]}>
-              {new Date(event.timestamp).toLocaleString()}
-            </Text>
-          </View>
-        ))}
+          ))
+        )}
       </View>
 
       {/* Session History */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Session History</Text>
         
-        {sessionHistory.map((session) => (
-          <View key={session.id} style={styles.sessionItem}>
-            <View style={styles.sessionHeader}>
-              <Text style={[styles.sessionDate, { color: colors.text }]}>
-                {new Date(session.start_time).toLocaleDateString()}
-              </Text>
-              <Text style={[styles.sessionStatus, { 
-                color: session.status === 'active' ? colors.success : colors.textSecondary 
-              }]}>
-                {session.status}
+        {sessionHistory.length === 0 ? (
+          <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
+            No session history available
+          </Text>
+        ) : (
+          sessionHistory.map((session) => (
+            <View key={session.id} style={styles.sessionItem}>
+              <View style={styles.sessionHeader}>
+                <Text style={[styles.sessionDate, { color: colors.text }]}>
+                  {new Date(session.start_time).toLocaleDateString()}
+                </Text>
+                <Text style={[styles.sessionStatus, { 
+                  color: session.status === 'active' ? colors.success : colors.textSecondary 
+                }]}>
+                  {session.status}
+                </Text>
+              </View>
+              
+              <View style={styles.sessionStats}>
+                <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
+                  Duration: {session.duration ? formatDuration(session.duration) : 'Active'}
+                </Text>
+                <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
+                  Views: {session.page_views}
+                </Text>
+                <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
+                  API: {session.api_calls}
+                </Text>
+              </View>
+              
+              <Text style={[styles.sessionDevice, { color: colors.textSecondary }]}>
+                {session.device_info.browser} on {session.device_info.os}
               </Text>
             </View>
-            
-            <View style={styles.sessionStats}>
-              <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
-                Duration: {session.duration ? formatDuration(session.duration) : 'Active'}
-              </Text>
-              <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
-                Views: {session.page_views}
-              </Text>
-              <Text style={[styles.sessionStat, { color: colors.textSecondary }]}>
-                API: {session.api_calls}
-              </Text>
-            </View>
-            
-            <Text style={[styles.sessionDevice, { color: colors.textSecondary }]}>
-              {session.device_info.browser} on {session.device_info.os}
-            </Text>
-          </View>
-        ))}
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -279,6 +346,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    margin: 16,
+  },
+  noDataTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noDataMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  noDataText: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  basicSessionInfo: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '100%',
+    alignItems: 'center',
+  },
+  basicSessionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  basicSessionText: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   section: {
     borderRadius: 12,

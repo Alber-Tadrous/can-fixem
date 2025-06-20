@@ -8,6 +8,7 @@ export function useSessionTracking() {
   const router = useRouter();
   const segments = useSegments();
   const lastRouteRef = useRef<string>('');
+  const sessionStartedRef = useRef<boolean>(false);
 
   // Track page views
   useEffect(() => {
@@ -25,18 +26,23 @@ export function useSessionTracking() {
 
   // Start session when user logs in
   useEffect(() => {
-    if (isAuthenticated && user && !sessionTracker.isActive) {
+    if (isAuthenticated && user && !sessionStartedRef.current) {
       console.log('🎯 useSessionTracking: Starting session for authenticated user');
+      sessionStartedRef.current = true;
+      
       sessionTracker.startSession(user.id, 'email').catch(error => {
         console.error('❌ useSessionTracking: Failed to start session:', error);
+        // Don't reset the flag on error - we still want to track the session locally
       });
     }
   }, [isAuthenticated, user]);
 
   // End session when user logs out
   useEffect(() => {
-    if (!isAuthenticated && sessionTracker.isActive) {
+    if (!isAuthenticated && sessionStartedRef.current) {
       console.log('🎯 useSessionTracking: Ending session for logged out user');
+      sessionStartedRef.current = false;
+      
       sessionTracker.endSession('manual', 'User logged out').catch(error => {
         console.error('❌ useSessionTracking: Failed to end session:', error);
       });

@@ -15,6 +15,7 @@ class SessionTracker {
   };
   private securityFlags: string[] = [];
   private isTracking = false;
+  private isInitialized = false;
 
   // Configuration
   private readonly IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -30,10 +31,20 @@ class SessionTracker {
     try {
       console.log('📊 SessionTracker: Starting session for user:', userId);
       
+      // Check if tables exist before proceeding
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        console.warn('⚠️ SessionTracker: Session tables not found, skipping session tracking');
+        this.currentSessionId = this.generateSessionId();
+        this.isTracking = false; // Disable tracking if tables don't exist
+        return this.currentSessionId;
+      }
+      
       this.currentSessionId = this.generateSessionId();
       this.sessionStartTime = new Date();
       this.lastActivityTime = new Date();
       this.isTracking = true;
+      this.isInitialized = true;
       this.resetActivityCounts();
       this.securityFlags = [];
 
@@ -70,25 +81,30 @@ class SessionTracker {
 
       if (error) {
         console.error('❌ SessionTracker: Error creating session:', error);
+        // Don't fail completely, just disable tracking
+        this.isTracking = false;
+      } else {
+        // Log login event
+        await this.logEvent('login', 'success', {
+          login_method: loginMethod,
+          device_info: deviceInfo,
+          location: location,
+          ip_address: ipAddress
+        });
+
+        // Start activity monitoring
+        this.startActivityMonitoring();
       }
-
-      // Log login event
-      await this.logEvent('login', 'success', {
-        login_method: loginMethod,
-        device_info: deviceInfo,
-        location: location,
-        ip_address: ipAddress
-      });
-
-      // Start activity monitoring
-      this.startActivityMonitoring();
 
       console.log('✅ SessionTracker: Session started successfully:', this.currentSessionId);
       return this.currentSessionId;
 
     } catch (error) {
       console.error('❌ SessionTracker: Error starting session:', error);
-      throw error;
+      // Create a basic session ID even if tracking fails
+      this.currentSessionId = this.generateSessionId();
+      this.isTracking = false;
+      return this.currentSessionId;
     }
   }
 
@@ -105,44 +121,48 @@ class SessionTracker {
       const endTime = new Date();
       const duration = endTime.getTime() - this.sessionStartTime.getTime();
 
-      // Update session record
-      const { error } = await supabase
-        .from('user_sessions')
-        .update({
-          end_time: endTime.toISOString(),
-          duration: duration,
+      // Only update database if tracking is enabled and tables exist
+      if (this.isTracking && this.isInitialized) {
+        // Update session record
+        const { error } = await supabase
+          .from('user_sessions')
+          .update({
+            end_time: endTime.toISOString(),
+            duration: duration,
+            logout_method: logoutMethod,
+            logout_reason: reason,
+            page_views: this.activityCounts.pageViews,
+            api_calls: this.activityCounts.apiCalls,
+            user_actions: this.activityCounts.userActions,
+            idle_time: this.activityCounts.idleTime,
+            security_flags: this.securityFlags,
+            status: 'terminated',
+            cleanup_status: 'completed'
+          })
+          .eq('id', this.currentSessionId);
+
+        if (error) {
+          console.error('❌ SessionTracker: Error updating session:', error);
+        }
+
+        // Log logout event
+        await this.logEvent('logout', logoutMethod, {
           logout_method: logoutMethod,
           logout_reason: reason,
-          page_views: this.activityCounts.pageViews,
-          api_calls: this.activityCounts.apiCalls,
-          user_actions: this.activityCounts.userActions,
-          idle_time: this.activityCounts.idleTime,
-          security_flags: this.securityFlags,
-          status: 'terminated',
-          cleanup_status: 'completed'
-        })
-        .eq('id', this.currentSessionId);
-
-      if (error) {
-        console.error('❌ SessionTracker: Error updating session:', error);
+          session_duration: duration,
+          total_page_views: this.activityCounts.pageViews,
+          total_api_calls: this.activityCounts.apiCalls,
+          total_user_actions: this.activityCounts.userActions,
+          total_idle_time: this.activityCounts.idleTime
+        });
       }
-
-      // Log logout event
-      await this.logEvent('logout', logoutMethod, {
-        logout_method: logoutMethod,
-        logout_reason: reason,
-        session_duration: duration,
-        total_page_views: this.activityCounts.pageViews,
-        total_api_calls: this.activityCounts.apiCalls,
-        total_user_actions: this.activityCounts.userActions,
-        total_idle_time: this.activityCounts.idleTime
-      });
 
       // Cleanup
       this.stopActivityMonitoring();
       this.currentSessionId = null;
       this.sessionStartTime = null;
       this.isTracking = false;
+      this.isInitialized = false;
       this.resetActivityCounts();
       this.securityFlags = [];
 
@@ -151,13 +171,38 @@ class SessionTracker {
     } catch (error) {
       console.error('❌ SessionTracker: Error ending session:', error);
       
-      // Mark cleanup as failed
-      if (this.currentSessionId) {
-        await supabase
-          .from('user_sessions')
-          .update({ cleanup_status: 'failed' })
-          .eq('id', this.currentSessionId);
+      // Mark cleanup as failed if possible
+      if (this.currentSessionId && this.isTracking) {
+        try {
+          await supabase
+            .from('user_sessions')
+            .update({ cleanup_status: 'failed' })
+            .eq('id', this.currentSessionId);
+        } catch (updateError) {
+          console.error('❌ SessionTracker: Error marking cleanup as failed:', updateError);
+        }
       }
+      
+      // Still cleanup local state
+      this.currentSessionId = null;
+      this.sessionStartTime = null;
+      this.isTracking = false;
+      this.isInitialized = false;
+    }
+  }
+
+  // Check if session tracking tables exist
+  private async checkTablesExist(): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .limit(1);
+      
+      return !error;
+    } catch (error) {
+      console.warn('⚠️ SessionTracker: Session tables do not exist:', error);
+      return false;
     }
   }
 
@@ -167,7 +212,7 @@ class SessionTracker {
     subtype: string, 
     data: Record<string, any> = {}
   ): Promise<void> {
-    if (!this.currentSessionId || !this.isTracking) return;
+    if (!this.currentSessionId || !this.isTracking || !this.isInitialized) return;
 
     try {
       const event: Partial<SessionEvent> = {
@@ -232,7 +277,7 @@ class SessionTracker {
 
   // Security monitoring
   async checkSecurity(): Promise<void> {
-    if (!this.currentSessionId || !this.isTracking) return;
+    if (!this.currentSessionId || !this.isTracking || !this.isInitialized) return;
 
     try {
       // Check session validity
@@ -267,6 +312,8 @@ class SessionTracker {
 
   // Flag security issues
   private async flagSecurity(alertType: string, description: string): Promise<void> {
+    if (!this.isTracking || !this.isInitialized) return;
+    
     this.securityFlags.push(`${alertType}:${Date.now()}`);
     
     const alert: Partial<SecurityAlert> = {
@@ -280,7 +327,11 @@ class SessionTracker {
       resolved: false
     };
 
-    await supabase.from('security_alerts').insert([alert]);
+    try {
+      await supabase.from('security_alerts').insert([alert]);
+    } catch (error) {
+      console.error('❌ SessionTracker: Error creating security alert:', error);
+    }
     
     await this.logEvent('security_check', alertType, {
       alert_type: alertType,
@@ -343,7 +394,7 @@ class SessionTracker {
     this.lastActivityTime = new Date();
     
     // Update session last activity in database
-    if (this.currentSessionId) {
+    if (this.currentSessionId && this.isTracking && this.isInitialized) {
       supabase
         .from('user_sessions')
         .update({ last_activity: this.lastActivityTime.toISOString() })
@@ -445,11 +496,17 @@ class SessionTracker {
   }
 
   private async getCurrentUserId(): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || 'unknown';
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id || 'unknown';
+    } catch (error) {
+      return 'unknown';
+    }
   }
 
   private async getConcurrentSessionCount(userId?: string): Promise<number> {
+    if (!this.isTracking || !this.isInitialized) return 0;
+    
     try {
       const targetUserId = userId || await this.getCurrentUserId();
       const { count } = await supabase
@@ -502,7 +559,7 @@ class SessionTracker {
   }
 
   get isActive(): boolean {
-    return this.isTracking && !!this.currentSessionId;
+    return !!this.currentSessionId; // Return true if we have a session ID, regardless of tracking status
   }
 
   get sessionDuration(): number {

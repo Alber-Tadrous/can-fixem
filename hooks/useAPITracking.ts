@@ -4,6 +4,11 @@ import { sessionTracker } from '@/lib/sessionTracker';
 // Hook to automatically track API calls
 export function useAPITracking() {
   useEffect(() => {
+    // Only set up tracking if we're in a web environment
+    if (typeof window === 'undefined' || !window.fetch) {
+      return;
+    }
+
     // Intercept fetch requests
     const originalFetch = window.fetch;
     
@@ -16,7 +21,7 @@ export function useAPITracking() {
         const response = await originalFetch(...args);
         const duration = Date.now() - startTime;
         
-        // Track successful API call
+        // Track successful API call (only if session is active)
         if (sessionTracker.isActive) {
           await sessionTracker.trackAPICall(
             url,
@@ -30,7 +35,7 @@ export function useAPITracking() {
       } catch (error) {
         const duration = Date.now() - startTime;
         
-        // Track failed API call
+        // Track failed API call (only if session is active)
         if (sessionTracker.isActive) {
           await sessionTracker.trackAPICall(
             url,
