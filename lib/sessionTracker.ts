@@ -16,6 +16,7 @@ class SessionTracker {
   private securityFlags: string[] = [];
   private isTracking = false;
   private isInitialized = false;
+  private sessionCreated = false; // Track if session was successfully created in DB
 
   // Configuration
   private readonly IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -40,6 +41,7 @@ class SessionTracker {
       this.lastActivityTime = new Date();
       this.resetActivityCounts();
       this.securityFlags = [];
+      this.sessionCreated = false; // Reset session creation flag
       
       console.log('📊 SessionTracker: Generated session ID:', this.currentSessionId);
       
@@ -83,18 +85,50 @@ class SessionTracker {
 
       console.log('📊 SessionTracker: Creating session record:', sessionData);
 
-      // Store session in database
-      const { error } = await supabase
-        .from('user_sessions')
-        .insert([sessionData]);
+      // Store session in database with retry logic
+      let sessionCreateAttempts = 0;
+      const maxAttempts = 3;
+      
+      while (sessionCreateAttempts < maxAttempts && !this.sessionCreated) {
+        try {
+          const { error } = await supabase
+            .from('user_sessions')
+            .insert([sessionData]);
 
-      if (error) {
-        console.error('❌ SessionTracker: Error creating session:', error);
-        // Don't fail completely, just disable database tracking
-        this.isTracking = false;
-      } else {
-        console.log('✅ SessionTracker: Session created in database');
-        
+          if (error) {
+            console.error(`❌ SessionTracker: Error creating session (attempt ${sessionCreateAttempts + 1}):`, error);
+            sessionCreateAttempts++;
+            
+            if (sessionCreateAttempts >= maxAttempts) {
+              console.error('❌ SessionTracker: Failed to create session after max attempts, disabling database tracking');
+              this.isTracking = false;
+              this.sessionCreated = false;
+              break;
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            console.log('✅ SessionTracker: Session created in database');
+            this.sessionCreated = true;
+            break;
+          }
+        } catch (insertError) {
+          console.error(`❌ SessionTracker: Exception creating session (attempt ${sessionCreateAttempts + 1}):`, insertError);
+          sessionCreateAttempts++;
+          
+          if (sessionCreateAttempts >= maxAttempts) {
+            this.isTracking = false;
+            this.sessionCreated = false;
+            break;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // Only log events and start monitoring if session was successfully created
+      if (this.sessionCreated) {
         // Log login event
         await this.logEvent('login', 'success', {
           login_method: loginMethod,
@@ -105,6 +139,8 @@ class SessionTracker {
 
         // Start activity monitoring
         this.startActivityMonitoring();
+      } else {
+        console.warn('⚠️ SessionTracker: Session not created in database, events will not be logged');
       }
 
       console.log('✅ SessionTracker: Session started successfully:', this.currentSessionId);
@@ -115,6 +151,7 @@ class SessionTracker {
       // Create a basic session ID even if tracking fails
       this.currentSessionId = this.generateSessionId();
       this.isTracking = false;
+      this.sessionCreated = false;
       this.isInitialized = true; // Still initialize for local tracking
       return this.currentSessionId;
     }
@@ -132,12 +169,13 @@ class SessionTracker {
       console.log('📊 SessionTracker: Logout method:', logoutMethod);
       console.log('📊 SessionTracker: Logout reason:', reason);
       console.log('📊 SessionTracker: Database tracking enabled:', this.isTracking);
+      console.log('📊 SessionTracker: Session created in DB:', this.sessionCreated);
       
       const endTime = new Date();
       const duration = endTime.getTime() - this.sessionStartTime.getTime();
 
-      // Only update database if tracking is enabled and tables exist
-      if (this.isTracking && this.isInitialized) {
+      // Only update database if tracking is enabled, initialized, AND session was created
+      if (this.isTracking && this.isInitialized && this.sessionCreated) {
         console.log('📊 SessionTracker: Updating session in database...');
         console.log('📊 SessionTracker: Session ID to update:', this.currentSessionId);
         
@@ -187,7 +225,7 @@ class SessionTracker {
           console.log('✅ SessionTracker: Session updated in database successfully');
         }
 
-        // Log logout event regardless of update success
+        // Log logout event only if session exists in database
         await this.logEvent('logout', logoutMethod, {
           logout_method: logoutMethod,
           logout_reason: reason,
@@ -198,7 +236,7 @@ class SessionTracker {
           total_idle_time: this.activityCounts.idleTime
         });
       } else {
-        console.log('📊 SessionTracker: Database tracking disabled, ending local session only');
+        console.log('📊 SessionTracker: Database tracking disabled or session not created, ending local session only');
       }
 
       // Cleanup
@@ -211,6 +249,7 @@ class SessionTracker {
       this.sessionStartTime = null;
       this.isTracking = false;
       this.isInitialized = false;
+      this.sessionCreated = false;
       this.resetActivityCounts();
       this.securityFlags = [];
 
@@ -219,8 +258,8 @@ class SessionTracker {
     } catch (error) {
       console.error('❌ SessionTracker: Error ending session:', error);
       
-      // Mark cleanup as failed if possible
-      if (this.currentSessionId && this.isTracking) {
+      // Mark cleanup as failed if possible and session exists in DB
+      if (this.currentSessionId && this.isTracking && this.sessionCreated) {
         try {
           console.log('📊 SessionTracker: Marking cleanup as failed for session:', this.currentSessionId);
           await supabase
@@ -240,6 +279,7 @@ class SessionTracker {
       this.sessionStartTime = null;
       this.isTracking = false;
       this.isInitialized = false;
+      this.sessionCreated = false;
     }
   }
 
@@ -263,16 +303,19 @@ class SessionTracker {
     }
   }
 
-  // Log various types of events
+  // Log various types of events - ONLY if session exists in database
   async logEvent(
     eventType: SessionEvent['event_type'], 
     subtype: string, 
     data: Record<string, any> = {}
   ): Promise<void> {
-    if (!this.currentSessionId || !this.isTracking || !this.isInitialized) {
-      // Still track locally even if database tracking is disabled
-      this.updateActivityCounts(eventType);
-      this.updateLastActivity();
+    // Update local activity counts regardless of database tracking
+    this.updateActivityCounts(eventType);
+    this.updateLastActivity();
+
+    // Only log to database if tracking is enabled, initialized, AND session was created
+    if (!this.currentSessionId || !this.isTracking || !this.isInitialized || !this.sessionCreated) {
+      console.log(`📊 SessionTracker: Event ${eventType}:${subtype} tracked locally only (DB tracking disabled or session not created)`);
       return;
     }
 
@@ -290,7 +333,23 @@ class SessionTracker {
         device_info: await this.getDeviceInfo()
       };
 
-      console.log('📊 SessionTracker: Logging event:', eventType, subtype);
+      console.log('📊 SessionTracker: Logging event to database:', eventType, subtype);
+
+      // Verify session exists before inserting event
+      const { data: sessionExists, error: sessionCheckError } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .eq('id', this.currentSessionId)
+        .single();
+
+      if (sessionCheckError || !sessionExists) {
+        console.error('❌ SessionTracker: Session does not exist in database, cannot log event:', sessionCheckError);
+        console.error('❌ SessionTracker: Session ID:', this.currentSessionId);
+        console.error('❌ SessionTracker: Disabling database tracking for this session');
+        this.sessionCreated = false;
+        this.isTracking = false;
+        return;
+      }
 
       // Store event in database
       const { error } = await supabase
@@ -299,19 +358,27 @@ class SessionTracker {
 
       if (error) {
         console.error('❌ SessionTracker: Error logging event:', error);
+        console.error('❌ SessionTracker: Event data:', event);
+        
+        // If foreign key constraint violation, disable tracking for this session
+        if (error.code === '23503') {
+          console.error('❌ SessionTracker: Foreign key violation - session does not exist, disabling tracking');
+          this.sessionCreated = false;
+          this.isTracking = false;
+        }
       } else {
         console.log('✅ SessionTracker: Event logged successfully');
       }
 
-      // Update activity counts
-      this.updateActivityCounts(eventType);
-      this.updateLastActivity();
-
     } catch (error) {
       console.error('❌ SessionTracker: Error in logEvent:', error);
-      // Still update local counts
-      this.updateActivityCounts(eventType);
-      this.updateLastActivity();
+      
+      // If this is a foreign key error, disable tracking
+      if (error instanceof Error && error.message.includes('23503')) {
+        console.error('❌ SessionTracker: Foreign key constraint error, disabling tracking');
+        this.sessionCreated = false;
+        this.isTracking = false;
+      }
     }
   }
 
@@ -356,8 +423,8 @@ class SessionTracker {
         return;
       }
 
-      // Check for concurrent sessions (only if database tracking is enabled)
-      if (this.isTracking) {
+      // Check for concurrent sessions (only if database tracking is enabled and session exists)
+      if (this.isTracking && this.sessionCreated) {
         const concurrentCount = await this.getConcurrentSessionCount();
         if (concurrentCount > 3) {
           await this.flagSecurity('too_many_sessions', `${concurrentCount} concurrent sessions detected`);
@@ -385,8 +452,8 @@ class SessionTracker {
   private async flagSecurity(alertType: string, description: string): Promise<void> {
     this.securityFlags.push(`${alertType}:${Date.now()}`);
     
-    // Only create database alert if tracking is enabled
-    if (!this.isTracking || !this.isInitialized) {
+    // Only create database alert if tracking is enabled and session exists
+    if (!this.isTracking || !this.isInitialized || !this.sessionCreated) {
       console.warn('⚠️ SessionTracker: Security flag recorded locally only:', alertType);
       return;
     }
@@ -473,8 +540,8 @@ class SessionTracker {
   private updateLastActivity(): void {
     this.lastActivityTime = new Date();
     
-    // Update session last activity in database (only if tracking is enabled)
-    if (this.currentSessionId && this.isTracking && this.isInitialized) {
+    // Update session last activity in database (only if tracking is enabled and session exists)
+    if (this.currentSessionId && this.isTracking && this.isInitialized && this.sessionCreated) {
       supabase
         .from('user_sessions')
         .update({ 
@@ -590,7 +657,7 @@ class SessionTracker {
   }
 
   private async getConcurrentSessionCount(userId?: string): Promise<number> {
-    if (!this.isTracking || !this.isInitialized) return 0;
+    if (!this.isTracking || !this.isInitialized || !this.sessionCreated) return 0;
     
     try {
       const targetUserId = userId || await this.getCurrentUserId();
