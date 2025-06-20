@@ -308,30 +308,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      console.log('🚪 Starting logout process...');
+      console.log('🚪 Starting comprehensive logout process...');
       console.log('👤 Current user before logout:', user?.email);
       
       // Set loading state immediately
       setIsLoading(true);
       
-      // End session tracking before clearing user state
-      if (sessionTracker.isActive) {
+      // Get current session info before clearing
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentSessionId = sessionTracker.sessionId;
+      
+      console.log('📊 Current session ID:', currentSessionId);
+      console.log('🔑 Current auth session exists:', !!session);
+      
+      // Step 1: End session tracking before clearing user state
+      if (sessionTracker.isActive && currentSessionId) {
         console.log('📊 Ending session tracking...');
         await sessionTracker.endSession('manual', 'User initiated logout');
       }
       
-      // Clear user state immediately to prevent UI issues
+      // Step 2: Call backend logout API to invalidate session server-side
+      if (session?.access_token && currentSessionId) {
+        try {
+          console.log('🌐 Calling backend logout API...');
+          
+          const logoutResponse = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+              'X-Session-ID': currentSessionId,
+            },
+          });
+          
+          console.log('🌐 Backend logout response status:', logoutResponse.status);
+          
+          if (logoutResponse.ok) {
+            const result = await logoutResponse.json();
+            console.log('✅ Backend logout successful:', result.message);
+          } else {
+            const error = await logoutResponse.json();
+            console.warn('⚠️ Backend logout failed:', error.error);
+            // Continue with client-side logout even if backend fails
+          }
+          
+        } catch (apiError) {
+          console.warn('⚠️ Backend logout API error (continuing with client logout):', apiError);
+          // Don't fail the entire logout if API call fails
+        }
+      } else {
+        console.log('⚠️ No session token or session ID for backend logout');
+      }
+      
+      // Step 3: Clear user state immediately to prevent UI issues
       console.log('🧹 Clearing user state immediately...');
       setUser(null);
       
-      // Clear any stored session data from local storage
+      // Step 4: Clear any stored session data from local storage
       console.log('🗑️ Clearing local storage...');
       if (typeof window !== 'undefined') {
         try {
           // Clear Supabase session from localStorage
           const keys = Object.keys(localStorage);
           keys.forEach(key => {
-            if (key.includes('supabase') || key.includes('auth')) {
+            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
               localStorage.removeItem(key);
               console.log('🗑️ Removed localStorage key:', key);
             }
@@ -340,7 +380,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Clear sessionStorage as well
           const sessionKeys = Object.keys(sessionStorage);
           sessionKeys.forEach(key => {
-            if (key.includes('supabase') || key.includes('auth')) {
+            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
               sessionStorage.removeItem(key);
               console.log('🗑️ Removed sessionStorage key:', key);
             }
@@ -350,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Call Supabase signOut with global scope to clear all sessions
+      // Step 5: Call Supabase signOut with global scope to clear all sessions
       console.log('📡 Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({
         scope: 'global' // Sign out from all sessions
@@ -371,14 +411,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ Supabase signOut successful');
       }
       
-      // Force clear the Supabase client session
+      // Step 6: Force clear the Supabase client session
       console.log('🔄 Force clearing Supabase client session...');
       try {
         // Access the internal session and clear it
         await supabase.auth.refreshSession();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          console.warn('⚠️ Session still exists after signOut, forcing clear...');
+        const { data: { session: postLogoutSession } } = await supabase.auth.getSession();
+        if (postLogoutSession) {
+          console.warn('⚠️ Session still exists after signOut, forcing additional clear...');
           // Additional cleanup if needed
         } else {
           console.log('✅ Session successfully cleared');
@@ -387,7 +427,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('⚠️ Error checking session after logout:', sessionError);
       }
       
-      console.log('🎉 Logout process completed - auth state change will trigger navigation');
+      console.log('🎉 Comprehensive logout process completed - auth state change will trigger navigation');
       
     } catch (error) {
       console.error('❌ Unexpected error during logout:', error);
