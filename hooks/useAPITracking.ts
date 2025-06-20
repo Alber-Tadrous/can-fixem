@@ -5,7 +5,7 @@ import { sessionTracker } from '@/lib/sessionTracker';
 export function useAPITracking() {
   useEffect(() => {
     // Only set up tracking if we're in a web environment
-    if (typeof window === 'undefined' || !window.fetch) {
+    if (typeof window === 'undefined' || typeof window.fetch === 'undefined') {
       return;
     }
 

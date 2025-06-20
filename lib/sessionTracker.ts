@@ -530,7 +530,7 @@ class SessionTracker {
       platform: Platform.OS,
       os: Platform.OS === 'web' ? (typeof navigator !== 'undefined' ? navigator.platform : 'unknown') : Platform.OS,
       browser: Platform.OS === 'web' ? this.getBrowserInfo() : 'mobile-app',
-      screen_resolution: Platform.OS === 'web' && typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
+      screen_resolution: Platform.OS === 'web' && typeof window !== 'undefined' && typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
       language: typeof navigator !== 'undefined' ? (navigator.language || 'unknown') : 'unknown'
     };
