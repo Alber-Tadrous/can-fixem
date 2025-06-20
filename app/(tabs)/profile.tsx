@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Settings, Car, Star, CreditCard, Bell, CircleHelp as HelpCircle, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
@@ -8,7 +8,63 @@ import ProfileMenuOption from '@/components/profile/ProfileMenuOption';
 export default function ProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      console.log('🚪 Profile: Logout button pressed');
+      console.log('👤 Profile: Current user:', user?.email);
+      console.log('⏳ Profile: Current loading state:', isLoading);
+      
+      // Show confirmation dialog
+      Alert.alert(
+        'Confirm Logout',
+        'Are you sure you want to log out?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('🚫 Profile: Logout cancelled by user')
+          },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: async () => {
+              console.log('✅ Profile: User confirmed logout');
+              
+              try {
+                await logout();
+                console.log('🎉 Profile: Logout completed successfully');
+                
+                // Navigate to auth screen after successful logout
+                console.log('🧭 Profile: Navigating to auth screen...');
+                router.replace('/(auth)');
+                
+              } catch (error) {
+                console.error('❌ Profile: Logout failed:', error);
+                
+                // Show error to user
+                Alert.alert(
+                  'Logout Failed',
+                  'There was an error logging out. Please try again.',
+                  [{ text: 'OK' }]
+                );
+              }
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('❌ Profile: Error in handleLogout:', error);
+      
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   return (
     <ScrollView 
@@ -25,12 +81,15 @@ export default function ProfileScreen() {
         
         <View style={styles.profileSection}>
           <Image 
-            source={{ uri: user?.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+            source={{ uri: user?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
             <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'John Doe'}</Text>
             <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user?.email || 'john.doe@example.com'}</Text>
+            <Text style={[styles.userRole, { color: colors.primary }]}>
+              {user?.role === 'service-provider' ? 'Service Provider' : 'Car Owner'}
+            </Text>
           </View>
           <TouchableOpacity 
             style={[styles.editButton, { borderColor: colors.border }]}
@@ -80,11 +139,20 @@ export default function ProfileScreen() {
       </View>
       
       <TouchableOpacity 
-        style={[styles.logoutButton, { backgroundColor: colors.danger + '10' }]}
-        onPress={logout}
+        style={[
+          styles.logoutButton, 
+          { 
+            backgroundColor: colors.danger + '10',
+            opacity: isLoading ? 0.6 : 1
+          }
+        ]}
+        onPress={handleLogout}
+        disabled={isLoading}
       >
         <LogOut size={20} color={colors.danger} />
-        <Text style={[styles.logoutText, { color: colors.danger }]}>Logout</Text>
+        <Text style={[styles.logoutText, { color: colors.danger }]}>
+          {isLoading ? 'Logging out...' : 'Logout'}
+        </Text>
       </TouchableOpacity>
       
       <Text style={[styles.versionText, { color: colors.textSecondary }]}>Version 1.0.0</Text>
@@ -135,6 +203,12 @@ const styles = StyleSheet.create({
   userEmail: {
     fontFamily: 'Poppins-Regular',
     fontSize: 14,
+    marginBottom: 2,
+  },
+  userRole: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 12,
+    textTransform: 'capitalize',
   },
   editButton: {
     paddingHorizontal: 16,

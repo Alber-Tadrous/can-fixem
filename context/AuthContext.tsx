@@ -30,7 +30,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkUser();
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
+      console.log('🔄 Auth state changed:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_OUT') {
+        console.log('🚪 User signed out - clearing user state');
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
       
       if (session?.user) {
         try {
@@ -50,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // Don't set user to null here, let the registration flow handle it
             }
           } else if (profile) {
+            console.log('✅ Profile loaded successfully:', profile.email);
             setUser(profile);
           }
         } catch (err) {
@@ -68,14 +76,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   async function checkUser() {
     try {
+      console.log('🔍 Checking current user session...');
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('Error getting session:', error);
+        console.error('❌ Error getting session:', error);
         return;
       }
       
       if (session?.user) {
+        console.log('👤 Found existing session for:', session.user.email);
         // Wait a bit for the database to be ready
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -86,16 +96,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
         
         if (profileError) {
-          console.error('Error fetching profile:', profileError);
+          console.error('❌ Error fetching profile:', profileError);
           if (profileError.code === 'PGRST116') {
             console.log('Profile not found - user may need to complete registration');
           }
         } else if (profile) {
+          console.log('✅ Profile loaded on startup:', profile.email);
           setUser(profile);
         }
+      } else {
+        console.log('🚫 No existing session found');
       }
     } catch (error) {
-      console.error('Error checking user:', error);
+      console.error('❌ Error checking user:', error);
     } finally {
       setIsLoading(false);
     }
@@ -103,18 +116,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔐 Starting login process for:', email);
       setIsLoading(true);
+      
       const { data: { session }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
         throw new Error(error.message);
       }
 
       if (session?.user) {
+        console.log('✅ Login successful for:', session.user.email);
         // Wait a bit for the database to be ready
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -125,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
         
         if (profileError) {
-          console.error('Error fetching profile after login:', profileError);
+          console.error('❌ Error fetching profile after login:', profileError);
           if (profileError.code === 'PGRST116') {
             throw new Error('Profile not found. Please contact support.');
           } else {
@@ -134,11 +150,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (profile) {
+          console.log('✅ Profile loaded after login:', profile.email);
           setUser(profile);
         }
       }
     } catch (error) {
-      console.error('Error logging in:', error);
+      console.error('❌ Error logging in:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -148,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: Partial<User>) => {
     try {
       setIsLoading(true);
-      console.log('Starting registration for:', userData.email, 'Role:', userData.role);
+      console.log('📝 Starting registration for:', userData.email, 'Role:', userData.role);
       
       // Validate required fields
       if (!userData.email || !userData.password || !userData.name || !userData.role) {
@@ -180,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (signUpError) {
-        console.error('Signup error:', signUpError);
+        console.error('❌ Signup error:', signUpError);
         
         // Handle specific error cases
         if (signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')) {
@@ -198,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Registration failed - no user session created');
       }
 
-      console.log('User signed up successfully:', authData.user.id);
+      console.log('✅ User signed up successfully:', authData.user.id);
 
       // Wait for the auth user to be fully created
       await new Promise(resolve => setTimeout(resolve, 3000)); // Increased wait time
@@ -220,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated_at: new Date().toISOString(),
       };
 
-      console.log('Creating profile with data:', profileData);
+      console.log('📝 Creating profile with data:', profileData);
 
       // Insert profile (no upsert needed for new users)
       const { data: profile, error: profileError } = await supabase
@@ -230,13 +247,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        console.error('❌ Profile creation error:', profileError);
         
         // If profile creation fails, we should clean up the auth user
         try {
           await supabase.auth.signOut();
         } catch (cleanupError) {
-          console.error('Error cleaning up auth user:', cleanupError);
+          console.error('❌ Error cleaning up auth user:', cleanupError);
         }
         
         // Handle specific profile creation errors
@@ -251,11 +268,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(`Failed to create profile: ${profileError.message}`);
       }
 
-      console.log('Profile created successfully:', profile);
+      console.log('✅ Profile created successfully:', profile);
 
       // If this is a service provider, create the service provider record
       if (userData.role === 'service-provider') {
-        console.log('Creating service provider record...');
+        console.log('🔧 Creating service provider record...');
         
         const serviceProviderData = {
           user_id: authData.user.id,
@@ -270,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: new Date().toISOString(),
         };
 
-        console.log('Creating service provider with data:', serviceProviderData);
+        console.log('🔧 Creating service provider with data:', serviceProviderData);
 
         // Insert service provider record (no upsert needed for new users)
         const { data: serviceProvider, error: serviceProviderError } = await supabase
@@ -280,26 +297,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
 
         if (serviceProviderError) {
-          console.error('Service provider creation error:', serviceProviderError);
+          console.error('❌ Service provider creation error:', serviceProviderError);
           
           // Clean up profile and auth user if service provider creation fails
           try {
             await supabase.from('profiles').delete().eq('id', authData.user.id);
             await supabase.auth.signOut();
           } catch (cleanupError) {
-            console.error('Error cleaning up after service provider creation failure:', cleanupError);
+            console.error('❌ Error cleaning up after service provider creation failure:', cleanupError);
           }
           
           throw new Error(`Failed to create service provider record: ${serviceProviderError.message}`);
         } else {
-          console.log('Service provider record created successfully:', serviceProvider);
+          console.log('✅ Service provider record created successfully:', serviceProvider);
         }
       }
 
       setUser(profile);
       
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -308,18 +325,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      console.log('🚪 Starting logout process...');
+      console.log('👤 Current user before logout:', user?.email);
+      
       setIsLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
-        throw error;
-      }
+      
+      // Clear user state immediately to provide instant feedback
+      console.log('🧹 Clearing user state...');
       setUser(null);
+      
+      // Call Supabase signOut
+      console.log('📡 Calling Supabase signOut...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Supabase logout error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+        });
+        
+        // Even if Supabase signOut fails, we've already cleared local state
+        // This ensures the user appears logged out in the UI
+        console.log('⚠️ Supabase signOut failed, but local state cleared');
+        
+        // Don't throw the error - we want the logout to appear successful to the user
+        // The auth state change listener will handle any cleanup
+      } else {
+        console.log('✅ Supabase signOut successful');
+      }
+      
+      console.log('🎉 Logout process completed');
+      
     } catch (error) {
-      console.error('Error logging out:', error);
-      throw error;
+      console.error('❌ Unexpected error during logout:', error);
+      
+      // Even on unexpected errors, ensure user state is cleared
+      setUser(null);
+      
+      // Don't throw the error - we want logout to always appear successful
+      console.log('⚠️ Logout had errors but user state cleared');
+      
     } finally {
       setIsLoading(false);
+      console.log('🏁 Logout process finished, isLoading set to false');
     }
   };
 
@@ -327,32 +377,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
 
     try {
+      console.log('📝 Updating user profile:', userData);
+      
       const { error } = await supabase
         .from('profiles')
         .update(userData)
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error updating user:', error);
+        throw error;
+      }
 
+      console.log('✅ User profile updated successfully');
       setUser({ ...user, ...userData });
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('❌ Error updating user:', error);
       throw error;
     }
   };
 
+  const contextValue = {
+    user, 
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    register,
+    logout,
+    updateUser
+  };
+
+  console.log('🔄 AuthContext render - User:', user?.email || 'None', 'Loading:', isLoading);
+
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        register,
-        logout,
-        updateUser
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
