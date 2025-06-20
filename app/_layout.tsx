@@ -37,31 +37,26 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     console.log('🛡️ AuthGuard: In auth group:', inAuthGroup);
 
-    // Handle navigation with immediate effect for logout scenarios
-    if (!isAuthenticated && !inAuthGroup) {
-      // User is not signed in and not in auth group, redirect to auth immediately
-      console.log('🧭 AuthGuard: User not authenticated, redirecting to auth immediately');
-      router.replace('/(auth)');
-    } else if (isAuthenticated && inAuthGroup) {
-      // User is signed in but in auth group, redirect to main app
-      console.log('🧭 AuthGuard: User authenticated but in auth group, redirecting to main app');
-      router.replace('/(tabs)');
-    } else {
-      console.log('🛡️ AuthGuard: No navigation needed');
-      console.log('🛡️ AuthGuard: User authenticated:', isAuthenticated);
-      console.log('🛡️ AuthGuard: In correct section:', inAuthGroup ? 'auth' : 'main');
-    }
+    // Add a small delay to ensure auth state is settled
+    const timeoutId = setTimeout(() => {
+      if (!isAuthenticated && !inAuthGroup) {
+        console.log('🧭 AuthGuard: User not authenticated, redirecting to auth');
+        router.replace('/(auth)');
+      } else if (isAuthenticated && inAuthGroup) {
+        console.log('🧭 AuthGuard: User authenticated but in auth group, redirecting to main app');
+        router.replace('/(tabs)');
+      } else {
+        console.log('🛡️ AuthGuard: No navigation needed');
+      }
+    }, 500); // Increased delay to ensure auth state is settled
+
+    return () => clearTimeout(timeoutId);
   }, [user, isAuthenticated, segments, isLoading, router]);
 
   // Additional effect specifically for handling logout (when user becomes null)
   useEffect(() => {
-    // This effect specifically handles the logout scenario
     if (!isLoading && user === null && segments[0] !== '(auth)') {
       console.log('🚨 AuthGuard: User became null (logout detected), forcing immediate redirect');
-      console.log('🚨 AuthGuard: Current segments:', segments);
-      console.log('🚨 AuthGuard: Forcing navigation to /(auth)');
-      
-      // Use replace to ensure we don't keep the protected route in history
       router.replace('/(auth)');
     }
   }, [user, isLoading, segments, router]);
