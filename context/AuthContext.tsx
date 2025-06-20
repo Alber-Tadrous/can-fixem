@@ -34,13 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Auth state changed:', event, session?.user?.id);
       
       if (event === 'SIGNED_OUT') {
-        console.log('🚪 User signed out - clearing user state and redirecting');
+        console.log('🚪 User signed out - clearing user state');
         setUser(null);
         setIsLoading(false);
         return;
       }
       
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in - loading profile');
         try {
           // Wait a bit for the database to be ready
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -52,9 +53,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
             
           if (error) {
-            console.error('Error fetching profile:', error);
+            console.error('❌ Error fetching profile:', error);
             if (error.code === 'PGRST116') {
-              console.log('Profile not found - user may need to complete registration');
+              console.log('⚠️ Profile not found - user may need to complete registration');
               // Don't set user to null here, let the registration flow handle it
             }
           } else if (profile) {
@@ -62,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(profile);
           }
         } catch (err) {
-          console.error('Error in auth state change:', err);
+          console.error('❌ Error in auth state change:', err);
         }
       } else {
         setUser(null);
@@ -82,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('❌ Error getting session:', error);
+        setIsLoading(false);
         return;
       }
       
@@ -99,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileError) {
           console.error('❌ Error fetching profile:', profileError);
           if (profileError.code === 'PGRST116') {
-            console.log('Profile not found - user may need to complete registration');
+            console.log('⚠️ Profile not found - user may need to complete registration');
           }
         } else if (profile) {
           console.log('✅ Profile loaded on startup:', profile.email);
@@ -132,34 +134,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session?.user) {
         console.log('✅ Login successful for:', session.user.email);
-        // Wait a bit for the database to be ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('❌ Error fetching profile after login:', profileError);
-          if (profileError.code === 'PGRST116') {
-            throw new Error('Profile not found. Please contact support.');
-          } else {
-            throw new Error('Failed to load user profile');
-          }
-        }
-        
-        if (profile) {
-          console.log('✅ Profile loaded after login:', profile.email);
-          setUser(profile);
-        }
+        // Profile will be loaded by the auth state change listener
+        // Don't set loading to false here - let the auth state change handle it
       }
     } catch (error) {
       console.error('❌ Error logging in:', error);
+      setIsLoading(false); // Only set loading to false on error
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 

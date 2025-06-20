@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
@@ -8,18 +8,30 @@ import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
     try {
+      console.log('🔐 Login button pressed for:', email);
       setError('');
+      
+      if (!email.trim() || !password.trim()) {
+        setError('Please enter both email and password');
+        return;
+      }
+      
+      console.log('📧 Attempting login...');
       await login(email, password);
-      router.replace('/(tabs)');
-    } catch (err) {
-      setError('Invalid email or password');
+      
+      console.log('✅ Login successful - AuthGuard will handle navigation');
+      // Don't manually navigate here - let the AuthGuard handle it
+      
+    } catch (err: any) {
+      console.error('❌ Login failed:', err);
+      setError(err.message || 'Invalid email or password');
     }
   };
 
@@ -53,6 +65,7 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              editable={!isLoading}
             />
           </View>
 
@@ -65,22 +78,39 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              editable={!isLoading}
             />
           </View>
 
-          {error ? <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text> : null}
+          {error ? (
+            <View style={[styles.errorContainer, { backgroundColor: colors.danger + '10', borderColor: colors.danger }]}>
+              <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
-            style={[styles.loginButton, { backgroundColor: colors.primary }]}
+            style={[
+              styles.loginButton, 
+              { 
+                backgroundColor: isLoading ? colors.textSecondary : colors.primary,
+                opacity: isLoading ? 0.7 : 1
+              }
+            ]}
             onPress={handleLogin}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>Sign In</Text>
-            <ArrowRight size={20} color="white" />
+            <Text style={styles.loginButtonText}>
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Text>
+            {!isLoading && <ArrowRight size={20} color="white" />}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.forgotPassword}
-            onPress={() => {/* Handle forgot password */}}
+            onPress={() => {
+              Alert.alert('Forgot Password', 'Password reset functionality will be implemented soon.');
+            }}
+            disabled={isLoading}
           >
             <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
               Forgot Password?
@@ -92,7 +122,10 @@ export default function LoginScreen() {
           <Text style={[styles.footerText, { color: colors.textSecondary }]}>
             Don't have an account?
           </Text>
-          <TouchableOpacity onPress={() => router.push('/sign-up')}>
+          <TouchableOpacity 
+            onPress={() => router.push('/sign-up')}
+            disabled={isLoading}
+          >
             <Text style={[styles.signUpText, { color: colors.primary }]}> Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -170,6 +203,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
   },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  errorText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,10 +248,5 @@ const styles = StyleSheet.create({
   signUpText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 14,
-  },
-  errorText: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 14,
-    textAlign: 'center',
   },
 });

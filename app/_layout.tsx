@@ -47,6 +47,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, segments, isLoading, router]);
 
+  // Show loading screen while auth is loading
+  if (isLoading) {
+    return null; // Keep splash screen visible
+  }
+
   return <>{children}</>;
 }
 
