@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Auth state changed:', event, session?.user?.id);
       
       if (event === 'SIGNED_OUT') {
-        console.log('🚪 User signed out - clearing user state');
+        console.log('🚪 User signed out - clearing user state immediately');
         setUser(null);
         setIsLoading(false);
         return;
@@ -311,6 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🚪 Starting logout process...');
       console.log('👤 Current user before logout:', user?.email);
       
+      // Set loading state immediately
       setIsLoading(true);
       
       // End session tracking before clearing user state
@@ -320,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Clear user state immediately to prevent UI issues
-      console.log('🧹 Clearing user state...');
+      console.log('🧹 Clearing user state immediately...');
       setUser(null);
       
       // Clear any stored session data from local storage
@@ -398,8 +399,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('⚠️ Logout had errors but user state cleared');
       
     } finally {
+      // Always set loading to false and ensure user is null
       setIsLoading(false);
       console.log('🏁 Logout process finished, isLoading set to false');
+      
+      // Double-check that user state is cleared
+      if (user !== null) {
+        console.log('🔄 Double-checking user state clear...');
+        setUser(null);
+      }
     }
   };
 
