@@ -140,44 +140,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         console.log('✅ Supabase login successful for:', session.user.email);
         
-        // Step 2: Start session tracking via API
-        try {
-          console.log('📊 Starting session tracking...');
-          
-          const deviceInfo = {
-            platform: 'web',
-            os: navigator.platform || 'unknown',
-            browser: getBrowserInfo(),
-            screen_resolution: `${screen.width}x${screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language
-          };
+        // Step 2: Start session tracking via API (only in browser)
+        if (typeof window !== 'undefined') {
+          try {
+            console.log('📊 Starting session tracking...');
+            
+            const deviceInfo = {
+              platform: 'web',
+              os: navigator?.platform || 'unknown',
+              browser: getBrowserInfo(),
+              screen_resolution: screen ? `${screen.width}x${screen.height}` : 'unknown',
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              language: navigator?.language || 'unknown'
+            };
 
-          const response = await fetch('/api/session/start', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              loginMethod: 'email',
-              userAgent: navigator.userAgent,
-              deviceInfo
-            })
-          });
+            const response = await fetch('/api/session/start', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({
+                loginMethod: 'email',
+                userAgent: navigator?.userAgent || 'unknown',
+                deviceInfo
+              })
+            });
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log('✅ Session tracking started:', result.sessionId);
-            setSessionId(result.sessionId);
-          } else {
-            const error = await response.json();
-            console.warn('⚠️ Session tracking failed (non-fatal):', error.error);
+            if (response.ok) {
+              const result = await response.json();
+              console.log('✅ Session tracking started:', result.sessionId);
+              setSessionId(result.sessionId);
+            } else {
+              const error = await response.json();
+              console.warn('⚠️ Session tracking failed (non-fatal):', error.error);
+              // Don't fail login if session tracking fails
+            }
+          } catch (sessionError) {
+            console.warn('⚠️ Session tracking error (non-fatal):', sessionError);
             // Don't fail login if session tracking fails
           }
-        } catch (sessionError) {
-          console.warn('⚠️ Session tracking error (non-fatal):', sessionError);
-          // Don't fail login if session tracking fails
         }
         
         // Profile will be loaded by the auth state change listener
@@ -361,8 +363,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('🔑 Current auth session exists:', !!session);
       
-      // Step 3: End session tracking via API
-      if (session?.access_token && currentSessionId) {
+      // Step 3: End session tracking via API (only in browser)
+      if (typeof window !== 'undefined' && session?.access_token && currentSessionId) {
         try {
           console.log('🌐 Calling backend session end API...');
           
@@ -397,9 +399,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Step 4: Clear session ID
       setSessionId(null);
       
-      // Step 5: Clear any stored session data from local storage
-      console.log('🗑️ Clearing local storage...');
+      // Step 5: Clear any stored session data from local storage (only in browser)
       if (typeof window !== 'undefined') {
+        console.log('🗑️ Clearing local storage...');
         try {
           const keys = Object.keys(localStorage);
           keys.forEach(key => {
