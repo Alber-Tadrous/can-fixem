@@ -147,11 +147,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             const deviceInfo = {
               platform: 'web',
-              os: navigator?.platform || 'unknown',
+              os: typeof navigator !== 'undefined' ? (navigator.platform || 'unknown') : 'unknown',
               browser: getBrowserInfo(),
-              screen_resolution: screen ? `${screen.width}x${screen.height}` : 'unknown',
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              language: navigator?.language || 'unknown'
+              screen_resolution: typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
+              timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
+              language: typeof navigator !== 'undefined' ? (navigator.language || 'unknown') : 'unknown'
             };
 
             const response = await fetch('/api/session/start', {
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               },
               body: JSON.stringify({
                 loginMethod: 'email',
-                userAgent: navigator?.userAgent || 'unknown',
+                userAgent: typeof navigator !== 'undefined' ? (navigator.userAgent || 'unknown') : 'unknown',
                 deviceInfo
               })
             });
@@ -400,7 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSessionId(null);
       
       // Step 5: Clear any stored session data from local storage (only in browser)
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         console.log('🗑️ Clearing local storage...');
         try {
           const keys = Object.keys(localStorage);
@@ -411,13 +411,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           });
           
-          const sessionKeys = Object.keys(sessionStorage);
-          sessionKeys.forEach(key => {
-            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-              sessionStorage.removeItem(key);
-              console.log('🗑️ Removed sessionStorage key:', key);
-            }
-          });
+          if (typeof sessionStorage !== 'undefined') {
+            const sessionKeys = Object.keys(sessionStorage);
+            sessionKeys.forEach(key => {
+              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                sessionStorage.removeItem(key);
+                console.log('🗑️ Removed sessionStorage key:', key);
+              }
+            });
+          }
         } catch (storageError) {
           console.warn('⚠️ Error clearing storage:', storageError);
         }
