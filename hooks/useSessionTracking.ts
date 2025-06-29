@@ -27,8 +27,8 @@ export function useSessionTracking() {
 
   // Track events via API
   const trackEvent = async (eventType: string, eventSubtype?: string, data: any = {}) => {
-    if (!sessionId || !isAuthenticated || typeof window === 'undefined') {
-      console.log('⚠️ No active session to track event or not in browser');
+    if (!sessionId || !isAuthenticated) {
+      console.log('⚠️ No active session to track event');
       return;
     }
 
@@ -42,16 +42,16 @@ export function useSessionTracking() {
 
       const deviceInfo = {
         platform: 'web',
-        userAgent: navigator?.userAgent || 'unknown',
-        language: navigator?.language || 'unknown',
+        userAgent: navigator.userAgent,
+        language: navigator.language,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         screen: {
-          width: window.screen?.width || 0,
-          height: window.screen?.height || 0
+          width: window.screen.width,
+          height: window.screen.height
         },
         viewport: {
-          width: window.innerWidth || 0,
-          height: window.innerHeight || 0
+          width: window.innerWidth,
+          height: window.innerHeight
         }
       };
 
@@ -66,7 +66,7 @@ export function useSessionTracking() {
           eventType,
           eventSubtype,
           data,
-          userAgent: navigator?.userAgent || 'unknown',
+          userAgent: navigator.userAgent,
           deviceInfo
         })
       });
