@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import { SplashScreen } from 'expo-router';
+import { Platform } from 'react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -85,7 +86,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 // Session Tracking Wrapper
 function SessionTrackingWrapper({ children }: { children: React.ReactNode }) {
   // Only enable tracking in browser environment
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && Platform.OS === 'web') {
     useSessionTracking();
     useAPITracking();
   }

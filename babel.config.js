@@ -4,7 +4,8 @@ module.exports = function (api) {
   return {
     presets: [
       ['babel-preset-expo', { 
-        jsxRuntime: 'automatic'
+        jsxRuntime: 'automatic',
+        web: { unstable_transformProfile: 'hermes-stable' }
       }]
     ],
     plugins: [
