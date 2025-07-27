@@ -21,7 +21,7 @@ export const supabase = createClient(
 
 // Add a helper function to completely clear the session
 export const clearSupabaseSession = async () => {
-  if (!isBrowser()) {
+  if (typeof window === 'undefined') {
     console.log('🧹 Server environment - skipping session clear');
     return;
   }

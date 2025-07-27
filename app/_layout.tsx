@@ -24,7 +24,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Skip auth guard logic during SSR
-    if (!isBrowser()) {
+    if (typeof window === 'undefined') {
       return;
     }
     
@@ -62,7 +62,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   // Additional effect specifically for handling logout (when user becomes null)
   useEffect(() => {
     // Skip during SSR
-    if (!isBrowser()) {
+    if (typeof window === 'undefined') {
       return;
     }
     
@@ -73,7 +73,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, segments, router]);
 
   // Show loading screen while auth is loading
-  if (isLoading || !isBrowser()) {
+  if (isLoading || typeof window === 'undefined') {
     console.log('🛡️ AuthGuard: Showing loading state');
     return null; // Keep splash screen visible
   }
@@ -85,7 +85,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 // Session Tracking Wrapper
 function SessionTrackingWrapper({ children }: { children: React.ReactNode }) {
   // Only enable tracking in browser environment
-  if (isBrowser()) {
+  if (typeof window !== 'undefined') {
     useSessionTracking();
     useAPITracking();
   }

@@ -1,15 +1,15 @@
 // Environment detection utilities
 export const ENV_CONFIG = {
-  isBrowser: typeof window !== 'undefined',
-  isServer: typeof window === 'undefined',
+  get isBrowser() { return typeof window !== 'undefined'; },
+  get isServer() { return typeof window === 'undefined'; },
   isDevelopment: process.env.NODE_ENV === 'development',
   
   // Safe accessors
-  getWindow: () => typeof window !== 'undefined' ? window : null,
-  getDocument: () => typeof document !== 'undefined' ? document : null,
-  getNavigator: () => typeof navigator !== 'undefined' ? navigator : null,
-  getLocalStorage: () => typeof window !== 'undefined' && window.localStorage ? window.localStorage : null,
-  getSessionStorage: () => typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null,
+  getWindow: () => typeof window !== 'undefined' ? window : undefined,
+  getDocument: () => typeof document !== 'undefined' ? document : undefined,
+  getNavigator: () => typeof window !== 'undefined' && window.navigator ? window.navigator : undefined,
+  getLocalStorage: () => typeof window !== 'undefined' && window.localStorage ? window.localStorage : undefined,
+  getSessionStorage: () => typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : undefined,
 };
 
 // Safe browser detection

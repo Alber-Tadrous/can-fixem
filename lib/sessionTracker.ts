@@ -493,14 +493,11 @@ class SessionTracker {
   // Activity monitoring
   private setupActivityListeners(): void {
     // Only setup listeners if we're in a web environment
-    if (isServer()) {
+    if (typeof window === 'undefined') {
       return;
     }
 
-    const window = ENV_CONFIG.getWindow();
-    const document = ENV_CONFIG.getDocument();
-    
-    if (!window || !document) {
+    if (typeof document === 'undefined') {
       return;
     }
 
@@ -608,24 +605,31 @@ class SessionTracker {
   }
 
   private async getDeviceInfo(): Promise<DeviceInfo> {
-    const navigator = ENV_CONFIG.getNavigator();
-    const window = ENV_CONFIG.getWindow();
+    if (typeof window === 'undefined') {
+      return {
+        platform: 'server',
+        os: 'unknown',
+        browser: 'Unknown',
+        screen_resolution: 'unknown',
+        timezone: 'unknown',
+        language: 'unknown'
+      };
+    }
     
     return {
       platform: Platform.OS,
-      os: Platform.OS === 'web' ? (navigator?.platform || 'unknown') : Platform.OS,
+      os: Platform.OS === 'web' ? (window.navigator?.platform || 'unknown') : Platform.OS,
       browser: Platform.OS === 'web' ? this.getBrowserInfo() : 'mobile-app',
-      screen_resolution: Platform.OS === 'web' && window?.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+      screen_resolution: Platform.OS === 'web' && window.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
-      language: navigator?.language || 'unknown'
+      language: window.navigator?.language || 'unknown'
     };
   }
 
   private getBrowserInfo(): string {
-    const navigator = ENV_CONFIG.getNavigator();
-    if (!navigator) return 'Unknown';
+    if (typeof window === 'undefined' || !window.navigator) return 'Unknown';
     
-    const userAgent = navigator.userAgent;
+    const userAgent = window.navigator.userAgent;
     if (userAgent.includes('Chrome')) return 'Chrome';
     if (userAgent.includes('Firefox')) return 'Firefox';
     if (userAgent.includes('Safari')) return 'Safari';
@@ -636,12 +640,9 @@ class SessionTracker {
   private async getLocationInfo(): Promise<GeolocationData | undefined> {
     try {
       // Only get location if user grants permission and we're in a browser environment
-      const navigator = ENV_CONFIG.getNavigator();
-      const window = ENV_CONFIG.getWindow();
-      
-      if (Platform.OS === 'web' && navigator?.geolocation && window) {
+      if (typeof window !== 'undefined' && Platform.OS === 'web' && window.navigator?.geolocation) {
         return new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
+          window.navigator.geolocation.getCurrentPosition(
             (position) => {
               resolve({
                 latitude: position.coords.latitude,

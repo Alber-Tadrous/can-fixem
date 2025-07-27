@@ -7,12 +7,11 @@ export function useAPITracking() {
 
   useEffect(() => {
     // Only set up tracking if we're in a web environment and have an active session
-    if (!isBrowser() || !sessionId || !isAuthenticated) {
+    if (typeof window === 'undefined' || !sessionId || !isAuthenticated) {
       return;
     }
 
-    const window = globalThis.window;
-    if (!window?.fetch) {
+    if (!window.fetch) {
       return;
     }
 

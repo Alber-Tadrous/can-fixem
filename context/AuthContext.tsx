@@ -472,7 +472,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper function to get browser info
   const getBrowserInfo = (): string => {
-    const navigator = ENV_CONFIG.getNavigator();
+    if (typeof window === 'undefined') return 'Unknown';
+    
+    const navigator = window.navigator;
     if (!navigator) return 'Unknown';
     
     const userAgent = navigator.userAgent;
@@ -485,16 +487,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper function to get device info safely
   const getDeviceInfo = () => {
-    const navigator = ENV_CONFIG.getNavigator();
-    const window = ENV_CONFIG.getWindow();
+    if (typeof window === 'undefined') {
+      return {
+        platform: 'server',
+        os: 'unknown',
+        browser: 'Unknown',
+        screen_resolution: 'unknown',
+        timezone: 'unknown',
+        language: 'unknown'
+      };
+    }
     
     return {
       platform: 'web',
-      os: navigator?.platform || 'unknown',
+      os: window.navigator?.platform || 'unknown',
       browser: getBrowserInfo(),
-      screen_resolution: window?.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+      screen_resolution: window.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
-      language: navigator?.language || 'unknown'
+      language: window.navigator?.language || 'unknown'
     };
   };
 

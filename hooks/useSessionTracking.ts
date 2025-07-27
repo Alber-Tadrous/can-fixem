@@ -43,16 +43,16 @@ export function useSessionTracking() {
 
       const deviceInfo = {
         platform: 'web',
-        userAgent: isBrowser() && navigator ? navigator.userAgent : 'server',
-        language: isBrowser() && navigator ? navigator.language : 'en',
+        userAgent: typeof window !== 'undefined' && window.navigator ? window.navigator.userAgent : 'server',
+        language: typeof window !== 'undefined' && window.navigator ? window.navigator.language : 'en',
         timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
         screen: {
-          width: isBrowser() && window?.screen ? window.screen.width : 0,
-          height: isBrowser() && window?.screen ? window.screen.height : 0
+          width: typeof window !== 'undefined' && window.screen ? window.screen.width : 0,
+          height: typeof window !== 'undefined' && window.screen ? window.screen.height : 0
         },
         viewport: {
-          width: isBrowser() && window ? window.innerWidth : 0,
-          height: isBrowser() && window ? window.innerHeight : 0
+          width: typeof window !== 'undefined' ? window.innerWidth : 0,
+          height: typeof window !== 'undefined' ? window.innerHeight : 0
         }
       };
 
@@ -67,7 +67,7 @@ export function useSessionTracking() {
           eventType,
           eventSubtype,
           data,
-          userAgent: isBrowser() && navigator ? navigator.userAgent : 'server',
+          userAgent: typeof window !== 'undefined' && window.navigator ? window.navigator.userAgent : 'server',
           deviceInfo
         })
       });
