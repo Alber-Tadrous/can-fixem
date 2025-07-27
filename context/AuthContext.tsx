@@ -146,11 +146,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           const deviceInfo = {
             platform: 'web',
-            os: navigator.platform || 'unknown',
+            os: typeof navigator !== 'undefined' ? (navigator.platform || 'unknown') : 'unknown',
             browser: getBrowserInfo(),
-            screen_resolution: `${screen.width}x${screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language
+            screen_resolution: typeof window !== 'undefined' && typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
+            timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
+            language: typeof navigator !== 'undefined' ? navigator.language : 'unknown'
           };
 
           const response = await fetch('/api/session/start', {
