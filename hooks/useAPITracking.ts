@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { isBrowser } from '@/utils/environment';
 
 export function useAPITracking() {
   const { sessionId, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Only set up tracking if we're in a web environment and have an active session
-    if (typeof window === 'undefined' || typeof window.fetch === 'undefined' || !sessionId || !isAuthenticated) {
+    if (!isBrowser() || !sessionId || !isAuthenticated) {
+      return;
+    }
+
+    const window = globalThis.window;
+    if (!window?.fetch) {
       return;
     }
 

@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSegments } from 'expo-router';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { useAPITracking } from '@/hooks/useAPITracking';
+import { isBrowser } from '@/utils/environment';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -22,6 +23,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Skip auth guard logic during SSR
+    if (!isBrowser()) {
+      return;
+    }
+    
     console.log('🛡️ AuthGuard: Effect triggered');
     console.log('🛡️ AuthGuard: User:', user?.email || 'None');
     console.log('🛡️ AuthGuard: Loading state:', isLoading);
@@ -55,6 +61,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Additional effect specifically for handling logout (when user becomes null)
   useEffect(() => {
+    // Skip during SSR
+    if (!isBrowser()) {
+      return;
+    }
+    
     if (!isLoading && user === null && segments[0] !== '(auth)') {
       console.log('🚨 AuthGuard: User became null (logout detected), forcing immediate redirect');
       router.replace('/(auth)');
@@ -62,7 +73,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, segments, router]);
 
   // Show loading screen while auth is loading
-  if (isLoading) {
+  if (isLoading || !isBrowser()) {
     console.log('🛡️ AuthGuard: Showing loading state');
     return null; // Keep splash screen visible
   }
@@ -73,8 +84,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 // Session Tracking Wrapper
 function SessionTrackingWrapper({ children }: { children: React.ReactNode }) {
-  useSessionTracking();
-  useAPITracking();
+  // Only enable tracking in browser environment
+  if (isBrowser()) {
+    useSessionTracking();
+    useAPITracking();
+  }
   return <>{children}</>;
 }
 

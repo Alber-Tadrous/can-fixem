@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { isBrowser } from '@/utils/environment';
 
 export const supabase = createClient(
   'https://srdzhnxqbdntqmqyttfe.supabase.co',
@@ -20,6 +21,11 @@ export const supabase = createClient(
 
 // Add a helper function to completely clear the session
 export const clearSupabaseSession = async () => {
+  if (!isBrowser()) {
+    console.log('🧹 Server environment - skipping session clear');
+    return;
+  }
+  
   try {
     console.log('🧹 Clearing Supabase session completely...');
     

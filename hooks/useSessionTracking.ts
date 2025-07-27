@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from './useAuth';
+import { isBrowser } from '@/utils/environment';
 
 export function useSessionTracking() {
   const { user, isAuthenticated, sessionId } = useAuth();
@@ -42,16 +43,16 @@ export function useSessionTracking() {
 
       const deviceInfo = {
         platform: 'web',
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        userAgent: isBrowser() && navigator ? navigator.userAgent : 'server',
+        language: isBrowser() && navigator ? navigator.language : 'en',
+        timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
         screen: {
-          width: window.screen.width,
-          height: window.screen.height
+          width: isBrowser() && window?.screen ? window.screen.width : 0,
+          height: isBrowser() && window?.screen ? window.screen.height : 0
         },
         viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight
+          width: isBrowser() && window ? window.innerWidth : 0,
+          height: isBrowser() && window ? window.innerHeight : 0
         }
       };
 
@@ -66,7 +67,7 @@ export function useSessionTracking() {
           eventType,
           eventSubtype,
           data,
-          userAgent: navigator.userAgent,
+          userAgent: isBrowser() && navigator ? navigator.userAgent : 'server',
           deviceInfo
         })
       });

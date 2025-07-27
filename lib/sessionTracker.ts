@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { SessionEvent, SessionData, DeviceInfo, GeolocationData, SecurityAlert } from '@/types/session';
 import { Platform } from 'react-native';
+import { ENV_CONFIG, isBrowser, isServer } from '@/utils/environment';
 
 class SessionTracker {
   private currentSessionId: string | null = null;
@@ -25,7 +26,7 @@ class SessionTracker {
 
   constructor() {
     // Only setup activity listeners if we're in a browser environment
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       this.setupActivityListeners();
     }
   }
@@ -97,14 +98,8 @@ class SessionTracker {
 
           if (error) {
             console.error(`❌ SessionTracker: Error creating session (attempt ${sessionCreateAttempts + 1}):`, error);
-            sessionCreateAttempts++;
+      if (isBrowser()) {
             
-            if (sessionCreateAttempts >= maxAttempts) {
-              console.error('❌ SessionTracker: Failed to create session after max attempts, disabling database tracking');
-              this.isTracking = false;
-              this.sessionCreated = false;
-              break;
-            }
             
             // Wait before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -206,15 +201,28 @@ class SessionTracker {
         console.log('📊 SessionTracker: Update result - Error:', error);
         console.log('📊 SessionTracker: Update result - Data:', data);
         console.log('📊 SessionTracker: Update result - Count:', count);
-
-        if (error) {
-          console.error('❌ SessionTracker: Error updating session:', error);
-          console.error('❌ SessionTracker: Error details:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
-          });
+          const localStorage = ENV_CONFIG.getLocalStorage();
+          const sessionStorage = ENV_CONFIG.getSessionStorage();
+          
+          if (localStorage) {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                localStorage.removeItem(key);
+                console.log('🗑️ Removed localStorage key:', key);
+              }
+            });
+          }
+          
+          if (sessionStorage) {
+            const sessionKeys = Object.keys(sessionStorage);
+            sessionKeys.forEach(key => {
+              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                sessionStorage.removeItem(key);
+                console.log('🗑️ Removed sessionStorage key:', key);
+              }
+            });
+          }
         } else if (!data || data.length === 0) {
           console.warn('⚠️ SessionTracker: No session record was updated - session may not exist in database');
           console.warn('⚠️ SessionTracker: This could be due to:');
@@ -485,7 +493,14 @@ class SessionTracker {
   // Activity monitoring
   private setupActivityListeners(): void {
     // Only setup listeners if we're in a web environment
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
+    if (isServer()) {
+      return;
+    }
+
+    const window = ENV_CONFIG.getWindow();
+    const document = ENV_CONFIG.getDocument();
+    
+    if (!window || !document) {
       return;
     }
 
@@ -593,18 +608,22 @@ class SessionTracker {
   }
 
   private async getDeviceInfo(): Promise<DeviceInfo> {
+    const navigator = ENV_CONFIG.getNavigator();
+    const window = ENV_CONFIG.getWindow();
+    
     return {
       platform: Platform.OS,
-      os: Platform.OS === 'web' ? (typeof navigator !== 'undefined' ? (navigator.platform || 'unknown') : 'unknown') : Platform.OS,
+      os: Platform.OS === 'web' ? (navigator?.platform || 'unknown') : Platform.OS,
       browser: Platform.OS === 'web' ? this.getBrowserInfo() : 'mobile-app',
-      screen_resolution: Platform.OS === 'web' && typeof window !== 'undefined' && typeof screen !== 'undefined' && screen.width && screen.height ? `${screen.width}x${screen.height}` : 'unknown',
+      screen_resolution: Platform.OS === 'web' && window?.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
-      language: typeof navigator !== 'undefined' ? (navigator.language || 'unknown') : 'unknown'
+      language: navigator?.language || 'unknown'
     };
   }
 
   private getBrowserInfo(): string {
-    if (typeof navigator === 'undefined') return 'Unknown';
+    const navigator = ENV_CONFIG.getNavigator();
+    if (!navigator) return 'Unknown';
     
     const userAgent = navigator.userAgent;
     if (userAgent.includes('Chrome')) return 'Chrome';
@@ -617,7 +636,10 @@ class SessionTracker {
   private async getLocationInfo(): Promise<GeolocationData | undefined> {
     try {
       // Only get location if user grants permission and we're in a browser environment
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof window !== 'undefined' && navigator.geolocation) {
+      const navigator = ENV_CONFIG.getNavigator();
+      const window = ENV_CONFIG.getWindow();
+      
+      if (Platform.OS === 'web' && navigator?.geolocation && window) {
         return new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
             (position) => {

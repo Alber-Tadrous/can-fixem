@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
+import { ENV_CONFIG, isBrowser } from '@/utils/environment';
 
 interface AuthContextProps {
   user: User | null;
@@ -144,14 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           console.log('📊 Starting session tracking...');
           
-          const deviceInfo = {
-            platform: 'web',
-            os: typeof navigator !== 'undefined' ? (navigator.platform || 'unknown') : 'unknown',
-            browser: getBrowserInfo(),
-            screen_resolution: typeof window !== 'undefined' && typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'unknown',
-            timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
-            language: typeof navigator !== 'undefined' ? navigator.language : 'unknown'
-          };
+          const deviceInfo = getDeviceInfo();
 
           const response = await fetch('/api/session/start', {
             method: 'POST',
@@ -161,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             body: JSON.stringify({
               loginMethod: 'email',
-              userAgent: navigator.userAgent,
+              userAgent: ENV_CONFIG.getNavigator()?.userAgent || 'unknown',
               deviceInfo
             })
           });
@@ -399,23 +393,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Step 5: Clear any stored session data from local storage
       console.log('🗑️ Clearing local storage...');
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         try {
-          const keys = Object.keys(localStorage);
-          keys.forEach(key => {
-            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-              localStorage.removeItem(key);
-              console.log('🗑️ Removed localStorage key:', key);
-            }
-          });
+          const localStorage = ENV_CONFIG.getLocalStorage();
+          const sessionStorage = ENV_CONFIG.getSessionStorage();
           
-          const sessionKeys = Object.keys(sessionStorage);
-          sessionKeys.forEach(key => {
-            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-              sessionStorage.removeItem(key);
-              console.log('🗑️ Removed sessionStorage key:', key);
-            }
-          });
+          if (localStorage) {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                localStorage.removeItem(key);
+                console.log('🗑️ Removed localStorage key:', key);
+              }
+            });
+          }
+          
+          if (sessionStorage) {
+            const sessionKeys = Object.keys(sessionStorage);
+            sessionKeys.forEach(key => {
+              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                sessionStorage.removeItem(key);
+                console.log('🗑️ Removed sessionStorage key:', key);
+              }
+            });
+          }
         } catch (storageError) {
           console.warn('⚠️ Error clearing storage:', storageError);
         }
@@ -471,7 +472,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper function to get browser info
   const getBrowserInfo = (): string => {
-    if (typeof navigator === 'undefined') return 'Unknown';
+    const navigator = ENV_CONFIG.getNavigator();
+    if (!navigator) return 'Unknown';
     
     const userAgent = navigator.userAgent;
     if (userAgent.includes('Chrome')) return 'Chrome';
@@ -479,6 +481,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userAgent.includes('Safari')) return 'Safari';
     if (userAgent.includes('Edge')) return 'Edge';
     return 'Unknown';
+  };
+
+  // Helper function to get device info safely
+  const getDeviceInfo = () => {
+    const navigator = ENV_CONFIG.getNavigator();
+    const window = ENV_CONFIG.getWindow();
+    
+    return {
+      platform: 'web',
+      os: navigator?.platform || 'unknown',
+      browser: getBrowserInfo(),
+      screen_resolution: window?.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+      timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
+      language: navigator?.language || 'unknown'
+    };
   };
 
   const contextValue = {
