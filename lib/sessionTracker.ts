@@ -617,7 +617,7 @@ class SessionTracker {
   private async getLocationInfo(): Promise<GeolocationData | undefined> {
     try {
       // Only get location if user grants permission and we're in a browser environment
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof window !== 'undefined' && navigator.geolocation) {
         return new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
             (position) => {
