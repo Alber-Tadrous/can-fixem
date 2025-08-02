@@ -26,6 +26,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Skip auth guard logic during SSR
     if (typeof window === 'undefined') {
+      console.log('🛡️ AuthGuard: SSR environment, skipping navigation logic');
       return;
     }
     

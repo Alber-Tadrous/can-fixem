@@ -32,7 +32,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('🔄 AuthProvider: Initializing...');
-    checkUser();
+    
+    // Only initialize auth in browser environment
+    if (typeof window !== 'undefined') {
+      checkUser();
+    } else {
+      // In SSR, just set loading to false
+      setIsLoading(false);
+      return;
+    }
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event, session?.user?.id);

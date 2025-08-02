@@ -1,24 +1,43 @@
 // Enhanced environment detection utilities for SSR compatibility
-export const ENV_CONFIG = {
-  // Dynamic getters that are evaluated at runtime, not build time
-  get isBrowser() { 
-    return typeof window !== 'undefined' && typeof window.document !== 'undefined'; 
-  },
-  get isServer() { 
-    return typeof window === 'undefined'; 
-  },
-  get isSSR() {
-    return typeof window === 'undefined' || typeof document === 'undefined';
-  },
-  isDevelopment: process.env.NODE_ENV === 'development',
+export const ENV_CONFIG = (() => {
+  // Create a safe environment config that works during static generation
+  const config = {
+    isDevelopment: false, // Default to production during build
+    
+    // Safe accessors that return undefined if not available
+    getWindow: () => typeof window !== 'undefined' ? window : undefined,
+    getDocument: () => typeof document !== 'undefined' ? document : undefined,
+    getNavigator: () => typeof window !== 'undefined' && window.navigator ? window.navigator : undefined,
+    getLocalStorage: () => typeof window !== 'undefined' && window.localStorage ? window.localStorage : undefined,
+    getSessionStorage: () => typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : undefined,
+  };
   
-  // Safe accessors that return undefined if not available
-  getWindow: () => typeof window !== 'undefined' ? window : undefined,
-  getDocument: () => typeof document !== 'undefined' ? document : undefined,
-  getNavigator: () => typeof window !== 'undefined' && window.navigator ? window.navigator : undefined,
-  getLocalStorage: () => typeof window !== 'undefined' && window.localStorage ? window.localStorage : undefined,
-  getSessionStorage: () => typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : undefined,
-};
+  // Add dynamic getters only if we're not in a static generation context
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      config.isDevelopment = process.env.NODE_ENV === 'development';
+    }
+    
+    Object.defineProperty(config, 'isBrowser', {
+      get: () => typeof window !== 'undefined' && typeof window.document !== 'undefined'
+    });
+    
+    Object.defineProperty(config, 'isServer', {
+      get: () => typeof window === 'undefined'
+    });
+    
+    Object.defineProperty(config, 'isSSR', {
+      get: () => typeof window === 'undefined' || typeof document === 'undefined'
+    });
+  } catch (e) {
+    // Fallback for static generation
+    config.isBrowser = false;
+    config.isServer = true;
+    config.isSSR = true;
+  }
+  
+  return config;
+})();
 
 // Safe browser detection functions
 export const isBrowser = () => typeof window !== 'undefined' && typeof window.document !== 'undefined';
