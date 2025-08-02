@@ -14,8 +14,14 @@ import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { useAPITracking } from '@/hooks/useAPITracking';
 import { isBrowser } from '@/utils/environment';
 
+function isSSR() {
+  return typeof window === 'undefined';
+}
+
 // Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
+if (!isSSR()) {
+  SplashScreen.preventAutoHideAsync();
+}
 
 // Auth Guard Component
 function AuthGuard({ children }: { children: React.ReactNode }) {
