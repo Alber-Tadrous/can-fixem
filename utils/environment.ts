@@ -48,50 +48,31 @@ export const isSSR = () => typeof window === 'undefined' || typeof document === 
 export class UniversalStorage {
   private isAvailable: boolean;
   private fallbackStorage: Map<string, string>;
-  private storage: Storage | null = null;
   
   constructor() {
+    this.isAvailable = this.checkAvailability();
     this.fallbackStorage = new Map();
-    this.isAvailable = false; // Will be checked lazily
   }
   
-  private getStorage(): Storage | null {
-    if (this.storage !== null) {
-      return this.storage;
-    }
-    
-    if (!isBrowser()) {
-      this.isAvailable = false;
-      return null;
-    }
-    
+  private checkAvailability(): boolean {
     try {
-      if (typeof window !== 'undefined' && 
-          typeof window.localStorage !== 'undefined' &&
-          window.localStorage !== null) {
-        this.storage = window.localStorage;
-        this.isAvailable = true;
-        return this.storage;
-      }
+      return typeof window !== 'undefined' && 
+             typeof window.localStorage !== 'undefined' &&
+             window.localStorage !== null;
     } catch (e) {
-      this.isAvailable = false;
-      return null;
+      return false;
     }
-    
-    this.isAvailable = false;
-    return null;
   }
   
   setItem(key: string, value: any): boolean {
-    const storage = this.getStorage();
-    if (!storage) {
+    if (!this.isAvailable) {
       // Use fallback storage during SSR
       this.fallbackStorage.set(key, JSON.stringify(value));
       return true;
     }
     
     try {
-      storage.setItem(key, JSON.stringify(value));
+      window.localStorage.setItem(key, JSON.stringify(value));
       return true;
     } catch (e) {
       console.error('Failed to set localStorage item:', e);
@@ -101,15 +82,14 @@ export class UniversalStorage {
   }
   
   getItem(key: string, defaultValue: any = null): any {
-    const storage = this.getStorage();
-    if (!storage) {
+    if (!this.isAvailable) {
       // Use fallback storage during SSR
       const item = this.fallbackStorage.get(key);
       return item ? JSON.parse(item) : defaultValue;
     }
     
     try {
-      const item = storage.getItem(key);
+      const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (e) {
       console.error('Failed to get localStorage item:', e);
@@ -118,14 +98,13 @@ export class UniversalStorage {
   }
   
   removeItem(key: string): boolean {
-    const storage = this.getStorage();
-    if (!storage) {
+    if (!this.isAvailable) {
       this.fallbackStorage.delete(key);
       return true;
     }
     
     try {
-      storage.removeItem(key);
+      window.localStorage.removeItem(key);
       return true;
     } catch (e) {
       console.error('Failed to remove localStorage item:', e);
@@ -134,14 +113,13 @@ export class UniversalStorage {
   }
   
   clear(): boolean {
-    const storage = this.getStorage();
-    if (!storage) {
+    if (!this.isAvailable) {
       this.fallbackStorage.clear();
       return true;
     }
     
     try {
-      storage.clear();
+      window.localStorage.clear();
       return true;
     } catch (e) {
       console.error('Failed to clear localStorage:', e);
