@@ -8,9 +8,9 @@ declare global {
 
 export function useFrameworkReady() {
   useEffect(() => {
-    // Check if window is defined (client-side) before accessing it
-    if (typeof window !== 'undefined') {
-      window.frameworkReady?.();
+    // Only access window in browser environment during client-side execution
+    if (typeof window !== 'undefined' && window.frameworkReady) {
+      window.frameworkReady();
     }
   });
 }
