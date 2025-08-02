@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
-import { ENV_CONFIG, isBrowser } from '@/utils/environment';
+import { ENV_CONFIG, isBrowser, isSSR, storage, safeWindowOperation } from '@/utils/environment';
 
 interface AuthContextProps {
   user: User | null;
@@ -393,34 +393,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Step 5: Clear any stored session data from local storage
       console.log('🗑️ Clearing local storage...');
-      if (isBrowser()) {
-        try {
-          const localStorage = ENV_CONFIG.getLocalStorage();
-          const sessionStorage = ENV_CONFIG.getSessionStorage();
-          
-          if (localStorage) {
-            const keys = Object.keys(localStorage);
-            keys.forEach(key => {
-              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-                localStorage.removeItem(key);
-                console.log('🗑️ Removed localStorage key:', key);
-              }
-            });
-          }
-          
-          if (sessionStorage) {
-            const sessionKeys = Object.keys(sessionStorage);
-            sessionKeys.forEach(key => {
-              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-                sessionStorage.removeItem(key);
-                console.log('🗑️ Removed sessionStorage key:', key);
-              }
-            });
-          }
-        } catch (storageError) {
-          console.warn('⚠️ Error clearing storage:', storageError);
+      safeWindowOperation(() => {
+        const localStorage = ENV_CONFIG.getLocalStorage();
+        const sessionStorage = ENV_CONFIG.getSessionStorage();
+        
+        if (localStorage) {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+              localStorage.removeItem(key);
+              console.log('🗑️ Removed localStorage key:', key);
+            }
+          });
         }
-      }
+        
+        if (sessionStorage) {
+          const sessionKeys = Object.keys(sessionStorage);
+          sessionKeys.forEach(key => {
+            if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+              sessionStorage.removeItem(key);
+              console.log('🗑️ Removed sessionStorage key:', key);
+            }
+          });
+        }
+      }, () => {
+        console.log('🗑️ Storage clearing skipped (SSR environment)');
+      });
       
       // Step 6: Call Supabase signOut with global scope
       console.log('📡 Calling Supabase signOut...');
@@ -487,7 +485,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper function to get device info safely
   const getDeviceInfo = () => {
-    if (typeof window === 'undefined') {
+    if (isSSR()) {
       return {
         platform: 'server',
         os: 'unknown',
@@ -498,14 +496,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     
-    return {
+    return safeWindowOperation(() => ({
       platform: 'web',
       os: window.navigator?.platform || 'unknown',
       browser: getBrowserInfo(),
       screen_resolution: window.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
       language: window.navigator?.language || 'unknown'
-    };
+    }), {
+      platform: 'server',
+      os: 'unknown',
+      browser: 'Unknown',
+      screen_resolution: 'unknown',
+      timezone: 'unknown',
+      language: 'unknown'
+    });
   };
 
   const contextValue = {

@@ -13,7 +13,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "name": "Can Fixem - Mobile Car Service Platform",
       "shortName": "Can Fixem",
       "lang": "en",
@@ -22,7 +22,10 @@
       "backgroundColor": "#FFFFFF",
       "display": "standalone",
       "orientation": "any",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "staticGeneration": {
+        "enabled": false
+      }
     },
     "plugins": [
       "expo-router", 

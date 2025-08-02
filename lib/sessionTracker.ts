@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { SessionEvent, SessionData, DeviceInfo, GeolocationData, SecurityAlert } from '@/types/session';
 import { Platform } from 'react-native';
-import { ENV_CONFIG, isBrowser, isServer } from '@/utils/environment';
+import { ENV_CONFIG, isBrowser, isServer, isSSR, safeWindowOperation } from '@/utils/environment';
 
 class SessionTracker {
   private currentSessionId: string | null = null;
@@ -25,8 +25,8 @@ class SessionTracker {
   private readonly MAX_SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor() {
-    // Only setup activity listeners if we're in a browser environment
-    if (isBrowser()) {
+    // Only setup activity listeners if we're in a browser environment (not SSR)
+    if (isBrowser() && !isSSR()) {
       this.setupActivityListeners();
     }
   }
@@ -492,32 +492,30 @@ class SessionTracker {
 
   // Activity monitoring
   private setupActivityListeners(): void {
-    // Only setup listeners if we're in a web environment
-    if (typeof window === 'undefined') {
+    // Skip during SSR
+    if (isSSR()) {
       return;
     }
 
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    if (Platform.OS === 'web') {
-      // Web-specific listeners
-      document.addEventListener('click', () => this.updateLastActivity());
-      document.addEventListener('keypress', () => this.updateLastActivity());
-      document.addEventListener('scroll', () => this.updateLastActivity());
-      document.addEventListener('mousemove', () => this.updateLastActivity());
-      
-      // Page visibility
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          this.logEvent('user_action', 'page_hidden', {});
-        } else {
-          this.logEvent('user_action', 'page_visible', {});
-          this.updateLastActivity();
-        }
-      });
-    }
+    safeWindowOperation(() => {
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        // Web-specific listeners
+        document.addEventListener('click', () => this.updateLastActivity());
+        document.addEventListener('keypress', () => this.updateLastActivity());
+        document.addEventListener('scroll', () => this.updateLastActivity());
+        document.addEventListener('mousemove', () => this.updateLastActivity());
+        
+        // Page visibility
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            this.logEvent('user_action', 'page_hidden', {});
+          } else {
+            this.logEvent('user_action', 'page_visible', {});
+            this.updateLastActivity();
+          }
+        });
+      }
+    });
   }
 
   private startActivityMonitoring(): void {
@@ -605,7 +603,7 @@ class SessionTracker {
   }
 
   private async getDeviceInfo(): Promise<DeviceInfo> {
-    if (typeof window === 'undefined') {
+    if (isSSR()) {
       return {
         platform: 'server',
         os: 'unknown',
@@ -616,44 +614,60 @@ class SessionTracker {
       };
     }
     
-    return {
+    return safeWindowOperation(() => ({
       platform: Platform.OS,
       os: Platform.OS === 'web' ? (window.navigator?.platform || 'unknown') : Platform.OS,
       browser: Platform.OS === 'web' ? this.getBrowserInfo() : 'mobile-app',
       screen_resolution: Platform.OS === 'web' && window.screen ? `${window.screen.width}x${window.screen.height}` : 'unknown',
       timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'unknown',
       language: window.navigator?.language || 'unknown'
-    };
+    }), {
+      platform: 'server',
+      os: 'unknown',
+      browser: 'Unknown',
+      screen_resolution: 'unknown',
+      timezone: 'unknown',
+      language: 'unknown'
+    });
   }
 
   private getBrowserInfo(): string {
-    if (typeof window === 'undefined' || !window.navigator) return 'Unknown';
-    
-    const userAgent = window.navigator.userAgent;
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Safari')) return 'Safari';
-    if (userAgent.includes('Edge')) return 'Edge';
-    return 'Unknown';
+    return safeWindowOperation(() => {
+      if (!window.navigator) return 'Unknown';
+      
+      const userAgent = window.navigator.userAgent;
+      if (userAgent.includes('Chrome')) return 'Chrome';
+      if (userAgent.includes('Firefox')) return 'Firefox';
+      if (userAgent.includes('Safari')) return 'Safari';
+      if (userAgent.includes('Edge')) return 'Edge';
+      return 'Unknown';
+    }, 'Unknown');
   }
 
   private async getLocationInfo(): Promise<GeolocationData | undefined> {
+    if (isSSR()) {
+      return undefined;
+    }
+    
     try {
-      // Only get location if user grants permission and we're in a browser environment
-      if (typeof window !== 'undefined' && Platform.OS === 'web' && window.navigator?.geolocation) {
-        return new Promise((resolve) => {
-          window.navigator.geolocation.getCurrentPosition(
-            (position) => {
-              resolve({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-              });
-            },
-            () => resolve(undefined), // Don't fail if location is denied
-            { timeout: 5000 }
-          );
-        });
-      }
+      return safeWindowOperation(() => {
+        // Only get location if user grants permission and we're in a browser environment
+        if (Platform.OS === 'web' && window.navigator?.geolocation) {
+          return new Promise<GeolocationData | undefined>((resolve) => {
+            window.navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude
+                });
+              },
+              () => resolve(undefined), // Don't fail if location is denied
+              { timeout: 5000 }
+            );
+          });
+        }
+        return undefined;
+      }, undefined);
     } catch (error) {
       console.warn('⚠️ SessionTracker: Could not get location:', error);
     }

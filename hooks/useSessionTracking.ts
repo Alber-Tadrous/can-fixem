@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from './useAuth';
-import { isBrowser } from '@/utils/environment';
+import { isBrowser, isSSR, safeWindowOperation } from '@/utils/environment';
 
 export function useSessionTracking() {
   const { user, isAuthenticated, sessionId } = useAuth();
@@ -43,16 +43,16 @@ export function useSessionTracking() {
 
       const deviceInfo = {
         platform: 'web',
-        userAgent: typeof window !== 'undefined' && window.navigator ? window.navigator.userAgent : 'server',
-        language: typeof window !== 'undefined' && window.navigator ? window.navigator.language : 'en',
+        userAgent: safeWindowOperation(() => window.navigator?.userAgent, 'server'),
+        language: safeWindowOperation(() => window.navigator?.language, 'en'),
         timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
         screen: {
-          width: typeof window !== 'undefined' && window.screen ? window.screen.width : 0,
-          height: typeof window !== 'undefined' && window.screen ? window.screen.height : 0
+          width: safeWindowOperation(() => window.screen?.width, 0),
+          height: safeWindowOperation(() => window.screen?.height, 0)
         },
         viewport: {
-          width: typeof window !== 'undefined' ? window.innerWidth : 0,
-          height: typeof window !== 'undefined' ? window.innerHeight : 0
+          width: safeWindowOperation(() => window.innerWidth, 0),
+          height: safeWindowOperation(() => window.innerHeight, 0)
         }
       };
 
@@ -67,7 +67,7 @@ export function useSessionTracking() {
           eventType,
           eventSubtype,
           data,
-          userAgent: typeof window !== 'undefined' && window.navigator ? window.navigator.userAgent : 'server',
+          userAgent: safeWindowOperation(() => window.navigator?.userAgent, 'server'),
           deviceInfo
         })
       });

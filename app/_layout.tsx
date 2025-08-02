@@ -85,8 +85,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 // Session Tracking Wrapper
 function SessionTrackingWrapper({ children }: { children: React.ReactNode }) {
-  // Only enable tracking in browser environment
-  if (typeof window !== 'undefined' && Platform.OS === 'web') {
+  // Only enable tracking in browser environment (not during SSR)
+  if (!isSSR() && Platform.OS === 'web') {
     useSessionTracking();
     useAPITracking();
   }

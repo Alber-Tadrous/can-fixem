@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { isBrowser } from '@/utils/environment';
+import { isBrowser, isSSR } from '@/utils/environment';
 
 export function useAPITracking() {
   const { sessionId, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Only set up tracking if we're in a web environment and have an active session
-    if (typeof window === 'undefined' || !sessionId || !isAuthenticated) {
+    // Only set up tracking if we're in a browser environment (not SSR) and have an active session
+    if (isSSR() || !sessionId || !isAuthenticated) {
       return;
     }
 
