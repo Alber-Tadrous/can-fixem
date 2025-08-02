@@ -200,10 +200,6 @@ class SessionTracker {
         console.log('📊 SessionTracker: Update result - Error:', error);
         console.log('📊 SessionTracker: Update result - Data:', data);
         console.log('📊 SessionTracker: Update result - Count:', count);
-
-        if (error) {
-          console.error('❌ SessionTracker: Error updating session:', error);
-        } else if (!data || data.length === 0) {
           console.warn('⚠️ SessionTracker: No session record was updated - session may not exist in database');
           console.warn('⚠️ SessionTracker: This could be due to:');
           console.warn('   - Session ID mismatch');
