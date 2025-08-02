@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Platform } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -24,6 +25,8 @@ export default function PageHeader({
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
+            accessibilityRole={Platform.OS === 'web' ? 'button' : undefined}
+            accessibilityLabel="Go back"
           >
             <ChevronLeft size={24} color={colors.text} />
           </TouchableOpacity>
@@ -35,6 +38,8 @@ export default function PageHeader({
             { color: colors.text },
             showBackButton && styles.titleWithBack
           ]}
+          accessibilityRole={Platform.OS === 'web' ? 'heading' : undefined}
+          accessibilityLevel={Platform.OS === 'web' ? 1 : undefined}
         >
           {title}
         </Text>
@@ -51,9 +56,16 @@ export default function PageHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 20 : 60,
     paddingBottom: 16,
     paddingHorizontal: 16,
+    ...(Platform.OS === 'web' && {
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E7EB',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+    }),
   },
   headerContent: {
     flexDirection: 'row',

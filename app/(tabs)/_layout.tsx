@@ -15,15 +15,24 @@ export default function TabLayout() {
           backgroundColor: colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+          paddingBottom: Platform.OS === 'web' ? 12 : Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
-          height: Platform.OS === 'ios' ? 90 : 70,
+          height: Platform.OS === 'web' ? 70 : Platform.OS === 'ios' ? 90 : 70,
+          ...(Platform.OS === 'web' && {
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+          }),
         },
         tabBarLabelStyle: {
           fontFamily: 'Poppins-Medium',
-          fontSize: 12,
+          fontSize: Platform.OS === 'web' ? 14 : 12,
         },
         headerShown: false,
+        tabBarHideOnKeyboard: Platform.OS !== 'web',
       }}
     >
       <Tabs.Screen

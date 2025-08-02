@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
@@ -54,7 +55,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[
+      styles.container, 
+      { backgroundColor: colors.background },
+      Platform.OS === 'web' && styles.webContainer
+    ]}>
       <View style={styles.header}>
         <Image
           source={{ uri: 'https://images.pexels.com/photos/3807329/pexels-photo-3807329.jpeg' }}
@@ -66,7 +71,7 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, Platform.OS === 'web' && styles.webContent]}>
         <Text style={[styles.title, { color: colors.text }]}>Welcome Back!</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Sign in to continue fixing cars on the go
@@ -85,6 +90,8 @@ export default function LoginScreen() {
               keyboardType="email-address"
               editable={!isLoading}
               autoComplete="email"
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter your email address"
             />
           </View>
 
@@ -99,6 +106,8 @@ export default function LoginScreen() {
               secureTextEntry
               editable={!isLoading}
               autoComplete="password"
+              accessibilityLabel="Password"
+              accessibilityHint="Enter your password"
             />
           </View>
 
@@ -118,6 +127,8 @@ export default function LoginScreen() {
             ]}
             onPress={handleLogin}
             disabled={isLoading}
+            accessibilityRole={Platform.OS === 'web' ? 'button' : undefined}
+            accessibilityLabel={isLoading ? 'Signing in...' : 'Sign in'}
           >
             <Text style={styles.loginButtonText}>
               {isLoading ? 'Signing In...' : 'Sign In'}
@@ -158,8 +169,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  webContainer: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
+    minHeight: '100vh',
+  },
   header: {
-    height: '35%',
+    height: Platform.OS === 'web' ? 200 : '35%',
     position: 'relative',
   },
   headerImage: {
@@ -193,6 +210,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 60,
+  },
+  webContent: {
+    paddingHorizontal: 32,
+    paddingTop: 80,
   },
   title: {
     fontFamily: 'Poppins-Bold',

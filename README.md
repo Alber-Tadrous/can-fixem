@@ -1,6 +1,6 @@
-# Can Fixem - Mobile Car Service Platform
+# Can Fixem - Car Service Platform
 
-Can Fixem is a comprehensive mobile platform that connects car owners with trusted service providers for on-demand car maintenance and repair services.
+Can Fixem is a comprehensive web and mobile platform that connects car owners with trusted service providers for on-demand car maintenance and repair services.
 
 ![Can Fixem Banner](https://images.pexels.com/photos/3807329/pexels-photo-3807329.jpeg)
 
@@ -26,7 +26,7 @@ Can Fixem is a comprehensive mobile platform that connects car owners with trust
 
 ## Technology Stack
 
-- **Frontend Framework**: React Native with Expo
+- **Frontend Framework**: React Native with Expo (Web + Mobile)
 - **Navigation**: Expo Router
 - **Backend**: Supabase
 - **Authentication**: Supabase Auth
@@ -36,6 +36,7 @@ Can Fixem is a comprehensive mobile platform that connects car owners with trust
 - **Icons**: Lucide React Native
 - **Fonts**: Google Fonts via Expo
 - **Type Safety**: TypeScript
+- **Web Deployment**: Static site generation with Netlify
 
 ## Architecture
 
@@ -177,7 +178,16 @@ cp .env.example .env
 
 4. Start the development server:
 ```bash
+# For web development
 npm run dev
+
+# For mobile development
+npm run dev
+```
+
+5. Build for web:
+```bash
+npm run build:web
 ```
 
 ### Environment Variables
@@ -223,8 +233,9 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ### Web Deployment
 - Build optimization
 - Environment configuration
-- Static file hosting
+- Static site generation
 - CDN integration
+- Netlify deployment
 
 ### Mobile Deployment
 - App Store submission

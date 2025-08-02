@@ -13,4 +13,14 @@ config.resolver.alias = {
 // Add support for additional file extensions
 config.resolver.sourceExts.push('jsx', 'js', 'ts', 'tsx', 'json');
 
+// Web-specific optimizations
+if (process.env.EXPO_PLATFORM === 'web') {
+  config.transformer.minifierConfig = {
+    keep_fnames: true,
+    mangle: {
+      keep_fnames: true,
+    },
+  };
+}
+
 module.exports = config;

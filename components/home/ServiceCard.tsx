@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Platform } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 interface Service {
@@ -45,12 +46,20 @@ export default function ServiceCard({ service, onPress }: ServiceCardProps) {
 
   return (
     <TouchableOpacity 
-      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[
+        styles.container, 
+        { backgroundColor: colors.card, borderColor: colors.border },
+        Platform.OS === 'web' && styles.webContainer
+      ]}
       onPress={onPress}
+      accessibilityRole={Platform.OS === 'web' ? 'button' : undefined}
+      accessibilityLabel={`${service.name} service, starting from ${formatPrice(service.base_price)}`}
     >
       <Image 
         source={{ uri: getServiceImage(service.category, service.name) }} 
         style={styles.image} 
+        accessibilityRole={Platform.OS === 'web' ? 'img' : undefined}
+        alt={`${service.name} service`}
       />
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
@@ -66,11 +75,22 @@ export default function ServiceCard({ service, onPress }: ServiceCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    width: 160,
+    width: Platform.OS === 'web' ? 200 : 160,
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
     marginRight: 12,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    }),
+  },
+  webContainer: {
+    marginBottom: 16,
+    ':hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    },
   },
   image: {
     width: '100%',

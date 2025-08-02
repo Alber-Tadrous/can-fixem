@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import { Platform } from 'react-native';
 import { MapPin, Search } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,22 +24,31 @@ export default function HomeScreen() {
   const featuredServices = services.slice(0, 5);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[
+      styles.container, 
+      { backgroundColor: colors.background },
+      Platform.OS === 'web' && styles.webContainer
+    ]}>
       <HomeHeader 
         username={user?.name || 'Guest'}
         location={location} 
         onLocationPress={() => {/* Open location modal */}}
       />
       
-      <SearchInput 
-        placeholder="Search for services or providers" 
-        icon={<Search size={20} color={colors.textSecondary} />}
-        onPress={() => {/* Open search */}}
-      />
+      <View style={styles.searchContainer}>
+        <SearchInput 
+          placeholder="Search for services or providers" 
+          icon={<Search size={20} color={colors.textSecondary} />}
+          onPress={() => {/* Open search */}}
+        />
+      </View>
       
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          Platform.OS === 'web' && styles.webScrollContent
+        ]}
       >
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -59,7 +69,10 @@ export default function HomeScreen() {
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
+              contentContainerStyle={[
+                styles.horizontalList,
+                Platform.OS === 'web' && styles.webHorizontalList
+              ]}
             >
               {featuredServices.map((service) => (
                 <ServiceCard 
@@ -86,7 +99,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.providersList}>
+          <View style={[
+            styles.providersList,
+            Platform.OS === 'web' && styles.webProvidersList
+          ]}>
             {nearbyProviders.slice(0, 4).map((provider) => (
               <ProviderCard 
                 key={provider.id}
@@ -124,8 +140,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  webContainer: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: Platform.OS === 'web' ? 100 : 30,
+  },
+  webScrollContent: {
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
   },
   section: {
     marginBottom: 24,
@@ -167,8 +195,18 @@ const styles = StyleSheet.create({
   horizontalList: {
     paddingRight: 8,
   },
+  webHorizontalList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   providersList: {
     gap: 12,
+  },
+  webProvidersList: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexWrap: Platform.OS === 'web' ? 'wrap' : 'nowrap',
+    justifyContent: Platform.OS === 'web' ? 'space-between' : 'flex-start',
   },
   bannerContainer: {
     borderRadius: 12,

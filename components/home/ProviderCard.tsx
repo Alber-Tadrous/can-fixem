@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Star, MapPin } from 'lucide-react-native';
+import { Platform } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Provider } from '@/data/mockData';
 
@@ -13,8 +14,14 @@ export default function ProviderCard({ provider, onPress }: ProviderCardProps) {
 
   return (
     <TouchableOpacity 
-      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[
+        styles.container, 
+        { backgroundColor: colors.card, borderColor: colors.border },
+        Platform.OS === 'web' && styles.webContainer
+      ]}
       onPress={onPress}
+      accessibilityRole={Platform.OS === 'web' ? 'button' : undefined}
+      accessibilityLabel={`${provider.name}, ${provider.rating} stars, ${provider.distance} miles away`}
     >
       <Image source={{ uri: provider.avatar }} style={styles.avatar} />
       
@@ -72,6 +79,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     padding: 12,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      width: Platform.OS === 'web' ? '48%' : '100%',
+      marginBottom: Platform.OS === 'web' ? 12 : 0,
+    }),
+  },
+  webContainer: {
+    ':hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    },
   },
   avatar: {
     width: 60,
