@@ -48,31 +48,50 @@ export const isSSR = () => typeof window === 'undefined' || typeof document === 
 export class UniversalStorage {
   private isAvailable: boolean;
   private fallbackStorage: Map<string, string>;
+  private storage: Storage | null = null;
   
   constructor() {
-    this.isAvailable = this.checkAvailability();
     this.fallbackStorage = new Map();
+    this.isAvailable = false; // Will be checked lazily
   }
   
-  private checkAvailability(): boolean {
-    try {
-      return typeof window !== 'undefined' && 
-             typeof window.localStorage !== 'undefined' &&
-             window.localStorage !== null;
-    } catch (e) {
-      return false;
+  private getStorage(): Storage | null {
+    if (this.storage !== null) {
+      return this.storage;
     }
+    
+    if (!isBrowser()) {
+      this.isAvailable = false;
+      return null;
+    }
+    
+    try {
+      if (typeof window !== 'undefined' && 
+          typeof window.localStorage !== 'undefined' &&
+          window.localStorage !== null) {
+        this.storage = window.localStorage;
+        this.isAvailable = true;
+        return this.storage;
+      }
+    } catch (e) {
+      this.isAvailable = false;
+      return null;
+    }
+    
+    this.isAvailable = false;
+    return null;
   }
   
   setItem(key: string, value: any): boolean {
-    if (!this.isAvailable) {
+    const storage = this.getStorage();
+    if (!storage) {
       // Use fallback storage during SSR
       this.fallbackStorage.set(key, JSON.stringify(value));
       return true;
     }
     
     try {
-      window.localStorage.setItem(key, JSON.stringify(value));
+      storage.setItem(key, JSON.stringify(value));
       return true;
     } catch (e) {
       console.error('Failed to set localStorage item:', e);
@@ -82,14 +101,15 @@ export class UniversalStorage {
   }
   
   getItem(key: string, defaultValue: any = null): any {
-    if (!this.isAvailable) {
+    const storage = this.getStorage();
+    if (!storage) {
       // Use fallback storage during SSR
       const item = this.fallbackStorage.get(key);
       return item ? JSON.parse(item) : defaultValue;
     }
     
     try {
-      const item = window.localStorage.getItem(key);
+      const item = storage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (e) {
       console.error('Failed to get localStorage item:', e);
@@ -98,13 +118,14 @@ export class UniversalStorage {
   }
   
   removeItem(key: string): boolean {
-    if (!this.isAvailable) {
+    const storage = this.getStorage();
+    if (!storage) {
       this.fallbackStorage.delete(key);
       return true;
     }
     
     try {
-      window.localStorage.removeItem(key);
+      storage.removeItem(key);
       return true;
     } catch (e) {
       console.error('Failed to remove localStorage item:', e);
@@ -113,13 +134,14 @@ export class UniversalStorage {
   }
   
   clear(): boolean {
-    if (!this.isAvailable) {
+    const storage = this.getStorage();
+    if (!storage) {
       this.fallbackStorage.clear();
       return true;
     }
     
     try {
-      window.localStorage.clear();
+      storage.clear();
       return true;
     } catch (e) {
       console.error('Failed to clear localStorage:', e);

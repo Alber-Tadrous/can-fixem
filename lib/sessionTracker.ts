@@ -98,8 +98,7 @@ class SessionTracker {
 
           if (error) {
             console.error(`❌ SessionTracker: Error creating session (attempt ${sessionCreateAttempts + 1}):`, error);
-      if (isBrowser()) {
-            
+            sessionCreateAttempts++;
             
             // Wait before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -201,29 +200,6 @@ class SessionTracker {
         console.log('📊 SessionTracker: Update result - Error:', error);
         console.log('📊 SessionTracker: Update result - Data:', data);
         console.log('📊 SessionTracker: Update result - Count:', count);
-          const localStorage = ENV_CONFIG.getLocalStorage();
-          const sessionStorage = ENV_CONFIG.getSessionStorage();
-          
-          if (localStorage) {
-            const keys = Object.keys(localStorage);
-            keys.forEach(key => {
-              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-                localStorage.removeItem(key);
-                console.log('🗑️ Removed localStorage key:', key);
-              }
-            });
-          }
-          
-          if (sessionStorage) {
-            const sessionKeys = Object.keys(sessionStorage);
-            sessionKeys.forEach(key => {
-              if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
-                sessionStorage.removeItem(key);
-                console.log('🗑️ Removed sessionStorage key:', key);
-              }
-            });
-          }
-        } else if (!data || data.length === 0) {
           console.warn('⚠️ SessionTracker: No session record was updated - session may not exist in database');
           console.warn('⚠️ SessionTracker: This could be due to:');
           console.warn('   - Session ID mismatch');
